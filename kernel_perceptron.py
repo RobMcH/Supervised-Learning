@@ -12,6 +12,7 @@ def polynomial_kernel(p, q, d):
 def gaussian_kernel(p, q, c):
     return np.exp(-c * np.power(np.linalg.norm(p - q), 2))
 
+
 @numba.njit()
 def kernelise(x_i, x_j, kernel_function, d):
     """
