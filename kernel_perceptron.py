@@ -13,7 +13,7 @@ def gaussian_kernel(p, q, c):
 
 
 @numba.njit(parallel=True)
-def kernelise(x_i, x_j, kernel_function, d):
+def kernelise(x_i, x_j, kernel_function, kernel_parameter):
     """
     Creates a gaussian kernel for kernel ridge regression based on the input data matrices X_i and X_j.
     """
@@ -21,18 +21,27 @@ def kernelise(x_i, x_j, kernel_function, d):
     kernel_ = np.zeros((length_i, length_j))
     for i in numba.prange(length_i):
         for j in numba.prange(length_j):
-            kernel_[i, j] = kernel_function(x_i[i], x_j[j], d)
+            kernel_[i, j] = kernel_function(x_i[i], x_j[j], kernel_parameter)
+    return kernel_
+
+
+@numba.njit(parallel=True)
+def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
+    length_i = len(x_i)
+    kernel_ = np.zeros((length_i, length_i))
+    for i in numba.prange(length_i):
+        for j in numba.prange(i, length_i):
+            kernel_[i, j] = kernel_[j, i] = kernel_function(x_i[i], x_i[j], kernel_parameter)
     return kernel_
 
 
 @numba.jit()
-def train_kernel_perceptron(train_x, train_y, epochs, kernel_function, dimension, num_classes):
-    kernel = kernelise(train_x, train_x, kernel_function, dimension)
-    weights = np.zeros((num_classes, train_x.shape[0]))
+def train_kernel_perceptron(train_y, epochs, kernel_matrix, num_classes):
+    weights = np.zeros((num_classes, train_y.shape[0]))
 
     for epoch in range(epochs):
-        for i in range(len(train_x) - 1):
-            y_hat = np.argmax(np.dot(weights[:, :i + 1], kernel[:i + 1, i + 1])) + 1
+        for i in range(len(train_y) - 1):
+            y_hat = np.argmax(np.dot(weights[:, :i + 1], kernel_matrix[:i + 1, i + 1])) + 1
             y = train_y[i, 0] + 1
             weights[y_hat - 1, i] -= y
             weights[y - 1, i] += y
@@ -40,18 +49,17 @@ def train_kernel_perceptron(train_x, train_y, epochs, kernel_function, dimension
 
 
 @numba.njit()
-def kernel_perceptron_predict(train_data, test_data, kernel_function, dimension, weights):
-    kernel = kernelise(train_data, test_data, kernel_function, dimension)
-    return weights @ kernel
+def kernel_perceptron_predict(kernel_matrix, weights):
+    return weights @ kernel_matrix
 
 
-def kernel_perceptron_predict_class(train_data, test_data, kernel_function, dimension, weights):
-    predictions = kernel_perceptron_predict(train_data, test_data, kernel_function, dimension, weights)
+def kernel_perceptron_predict_class(kernel_matrix, weights):
+    predictions = kernel_perceptron_predict(kernel_matrix, weights)
     return np.argmax(predictions, axis=0).reshape(-1, 1)
 
 
-def kernel_perceptron_evaluate(test_x, test_y, train_data, kernel_function, dimension, weights):
-    mistakes, total = 0, test_x.shape[0]
-    predictions = kernel_perceptron_predict_class(train_data, test_x, kernel_function, dimension, weights)
+def kernel_perceptron_evaluate(test_y, kernel_matrix, weights):
+    mistakes, total = 0, test_y.shape[0]
+    predictions = kernel_perceptron_predict_class(kernel_matrix, weights)
     mistakes = (predictions != test_y).sum()
     return mistakes / total * 100

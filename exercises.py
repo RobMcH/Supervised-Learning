@@ -1,25 +1,30 @@
-from kernel_perceptron import *
-from data import *
+import numpy as np
+from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, kernel_perceptron_evaluate, \
+    polynomial_kernel, gaussian_kernel
+from data import read_data, random_split_indices
 
 
-def task_1_1():
+def task_1_1(kernel_function, kernel_parameters):
     x_data, y_data = read_data("data/zipcombo.dat")
     indices = np.arange(0, x_data.shape[0])
-    train_errors, test_errors = {i: [] for i in range(1, 8)}, {i: [] for i in range(1, 8)}
+    train_errors = {i: [] for i, j in enumerate(kernel_parameters)}
+    test_errors = {i: [] for i, j in enumerate(kernel_parameters)}
     num_classes = 10
 
-    for epoch in range(1, 21):
-        print(f"Iteration {epoch}")
-        train_indices, test_indices = random_split_indices(indices, 0.8)
-        for dimension in range(1, 8):
-            weights = train_kernel_perceptron(x_data[train_indices], y_data[train_indices], 3, polynomial_kernel,
-                                              dimension, num_classes)
-            train_error = kernel_perceptron_evaluate(x_data[train_indices], y_data[train_indices],
-                                                     x_data[train_indices], polynomial_kernel, dimension, weights)
-            train_errors[dimension].append(train_error)
-            test_error = kernel_perceptron_evaluate(x_data[test_indices], y_data[test_indices], x_data[train_indices],
-                                                    polynomial_kernel, dimension, weights)
-            test_errors[dimension].append(test_error)
+    for index, kernel_parameter in enumerate(kernel_parameters):
+        print(f"Evaluating kernel parameter {kernel_parameter}")
+        kernel_matrix = kernelise_symmetric(x_data, kernel_function, kernel_parameter)
+        for epoch in range(20):
+            train_indices, test_indices = random_split_indices(indices, 0.8)
+            train_kernel_matrix = kernel_matrix[train_indices, train_indices.reshape((-1, 1))]
+
+            weights = train_kernel_perceptron(y_data[train_indices], 3, train_kernel_matrix, num_classes)
+            train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, weights)
+            train_errors[index].append(train_error)
+            # Test
+            test_kernel_matrix = kernel_matrix[train_indices.reshape((-1, 1)), test_indices]
+            test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, weights)
+            test_errors[index].append(test_error)
 
     # Analyse results.
     train_errors_mean_std = [(np.average(errors), np.std(errors)) for errors in train_errors.values()]
@@ -30,9 +35,15 @@ def task_1_1():
 def errors_to_latex_table(train_errors, test_errors):
     for i in range(len(train_errors)):
         (train_error, train_std), (test_error, test_std) = train_errors[i], test_errors[i]
-        print(f"\t{i} & {train_error} \\pm {train_std} & {test_error} \\pm {test_std} \\\\")
+        print(f"\t{i + 1} & {train_error} \\pm {train_std} & {test_error} \\pm {test_std} \\\\")
 
 
 if __name__ == '__main__':
-    train_e, test_e = task_1_1()
+    # Polynomial kernel.
+    dimensions = [i for i in range(1, 8)]
+    train_e, test_e = task_1_1(polynomial_kernel, dimensions)
+    errors_to_latex_table(train_e, test_e)
+    # Gaussian kernel.
+    cs = [1.0, 2.0, 5.0, 10.0]
+    train_e, test_e = task_1_1(gaussian_kernel, cs)
     errors_to_latex_table(train_e, test_e)
