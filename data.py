@@ -6,6 +6,7 @@ rng = np.random.default_rng(42)
 def read_data(fn):
     data = np.loadtxt(fn)
     y, x = np.hsplit(data, [1])
+    x = x.astype(np.float64)
     y = y.astype(np.int64)
     return x, y
 
