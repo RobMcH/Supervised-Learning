@@ -36,16 +36,23 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 
 
 @numba.jit()
-def train_kernel_perceptron(train_y, epochs, kernel_matrix, num_classes):
+def train_kernel_perceptron(train_y, kernel_matrix, num_classes):
     weights = np.zeros((num_classes, train_y.shape[0]))
-
-    for epoch in range(epochs):
+    best_weights = np.zeros_like(weights)
+    error, last_error = 0, train_y.shape[0] + 1
+    while True:
+        error = 0
         for i in range(len(train_y) - 1):
             y_hat = np.argmax(np.dot(weights[:, :i + 1], kernel_matrix[:i + 1, i + 1])) + 1
             y = train_y[i, 0] + 1
+            error += 1 if y_hat != y else 0
             weights[y_hat - 1, i] -= y
             weights[y - 1, i] += y
-    return weights
+        if error >= last_error:
+            break
+        last_error = error
+        best_weights = weights
+    return best_weights
 
 
 @numba.njit()
