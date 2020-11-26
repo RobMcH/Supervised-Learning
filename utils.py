@@ -53,7 +53,7 @@ def generate_absolute_confusion_matrix(predictions, y, num_classes):
 
 def merge_confusion_matrices(confusion_matrices):
     # Merge multiple confusion matrices into a single one containing the mean, and one containing the std. deviations.
-    merged_matrix = np.array(confusion_matrices).sum(axis=0)
+    merged_matrix = np.average(np.array(confusion_matrices))
     std_matrix = np.around(np.array(confusion_matrices).std(axis=0), 3)
     return merged_matrix, std_matrix
 
@@ -61,6 +61,6 @@ def merge_confusion_matrices(confusion_matrices):
 def matrices_to_latex_table(mean_matrix, std_matrix):
     # Generate a single latex table for a matrix containing the confusion means, and one containing the std. deviations.
     for i in range(mean_matrix.shape[0]):
-        row_string = [f"{mean_matrix[i][j]} \\pm {std_matrix[i][j]}" for j in range(mean_matrix.shape[1])]
+        row_string = [f"${mean_matrix[i][j]} \\pm {std_matrix[i][j]}$" for j in range(mean_matrix.shape[1])]
         row_string = " & ".join(row_string)
-        print(row_string, "\\\\")
+        print("\t", row_string, "\\\\")

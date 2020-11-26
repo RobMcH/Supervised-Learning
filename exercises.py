@@ -4,6 +4,7 @@ from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, kern
 from data import read_data, random_split_indices, rng
 from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, errors_to_latex_table,\
     matrices_to_latex_table
+from plotter import plot_confusion_matrix
 
 
 def task_1_1(kernel_function, kernel_parameters):
@@ -44,7 +45,7 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False):
     test_errors, parameters = [], []
     confusion_matrices = []
     num_classes = 10
-    for epoch in range(20):
+    for epoch in range(5):
         print(f"Iteration {epoch + 1}")
         best_parameter_matrix, best_parameter = None, 0
         train_indices, test_indices = None, None
@@ -99,9 +100,13 @@ if __name__ == '__main__':
     dimensions = [i for i in range(1, 8)]
     """test_error, p = task_1_2(polynomial_kernel, dimensions)
     print(test_error, p)"""
-    matrices_to_latex_table(*task_1_2(polynomial_kernel, dimensions, confusions=True))
+    matrices = task_1_2(polynomial_kernel, dimensions, confusions=True)
+    matrices_to_latex_table(*matrices)
+    plot_confusion_matrix(*matrices, 10, "plots/polynommial_confusion_matrix")
     # errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions), dimensions)
     # Gaussian kernel.
     cs = [0.5, 1.0, 2.0]
-    matrices_to_latex_table(*task_1_2(gaussian_kernel, cs, confusions=True))
+    matrices = task_1_2(gaussian_kernel, cs, confusions=True)
+    matrices_to_latex_table(*matrices)
+    plot_confusion_matrix(*matrices, 10, "plots/gaussian_confusion_matrix")
     # errors_to_latex_table(*task_1_1(gaussian_kernel, cs), cs)
