@@ -37,36 +37,36 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 
 @numba.jit()
 def train_kernel_perceptron(train_y, kernel_matrix, num_classes):
-    weights = np.zeros((num_classes, train_y.shape[0]))
-    best_weights = np.zeros_like(weights)
+    alphas = np.zeros((num_classes, train_y.shape[0]))
+    best_alphas = np.zeros_like(alphas)
     error, last_error = 0, train_y.shape[0] + 1
     while True:
         error = 0
         for i in range(len(train_y) - 1):
-            y_hat = np.argmax(np.dot(weights[:, :i + 1], kernel_matrix[:i + 1, i + 1])) + 1
+            y_hat = np.argmax(np.dot(alphas[:, :i + 1], kernel_matrix[:i + 1, i + 1])) + 1
             y = train_y[i, 0] + 1
             error += 1 if y_hat != y else 0
-            weights[y_hat - 1, i] -= y
-            weights[y - 1, i] += y
+            alphas[y_hat - 1, i] -= y
+            alphas[y - 1, i] += y
         if error >= last_error:
             break
         last_error = error
-        best_weights = weights
-    return best_weights
+        best_alphas = alphas
+    return best_alphas
 
 
 @numba.njit()
-def kernel_perceptron_predict(kernel_matrix, weights):
-    return weights @ kernel_matrix
+def kernel_perceptron_predict(kernel_matrix, alphas):
+    return alphas @ kernel_matrix
 
 
-def kernel_perceptron_predict_class(kernel_matrix, weights):
-    predictions = kernel_perceptron_predict(kernel_matrix, weights)
+def kernel_perceptron_predict_class(kernel_matrix, alphas):
+    predictions = kernel_perceptron_predict(kernel_matrix, alphas)
     return np.argmax(predictions, axis=0).reshape(-1, 1)
 
 
-def kernel_perceptron_evaluate(test_y, kernel_matrix, weights):
+def kernel_perceptron_evaluate(test_y, kernel_matrix, alphas):
     mistakes, total = 0, test_y.shape[0]
-    predictions = kernel_perceptron_predict_class(kernel_matrix, weights)
+    predictions = kernel_perceptron_predict_class(kernel_matrix, alphas)
     mistakes = (predictions != test_y).sum()
     return mistakes / total * 100
