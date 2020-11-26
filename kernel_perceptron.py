@@ -23,7 +23,7 @@ def gaussian_kernel(p, q, c):
     :param q: Second vector
     :param c: Kernel parameter.
     """
-    return np.exp(-c * np.power(np.linalg.norm(p - q), 2))
+    return np.exp(np.multiply(-c, np.power(np.linalg.norm(p - q), 2)))
 
 
 @numba.njit(parallel=True)
@@ -32,7 +32,7 @@ def kernelise(x_i, x_j, kernel_function, kernel_parameter):
     Creates a Gaussian kernel matrix based on the input data matrices x_i and x_j.
     """
     length_i, length_j = len(x_i), len(x_j)
-    kernel_ = np.zeros((length_i, length_j))
+    kernel_ = np.zeros((length_i, length_j), dtype=np.float64)
     for i in numba.prange(length_i):
         for j in numba.prange(length_j):
             kernel_[i, j] = kernel_function(x_i[i], x_j[j], kernel_parameter)
@@ -46,7 +46,7 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
     resulting kernel and should be used whenever possible (in comparison with the kernelise method).
     """
     length_i = len(x_i)
-    kernel_ = np.zeros((length_i, length_i))
+    kernel_ = np.zeros((length_i, length_i), dtype=np.float64)
     for i in numba.prange(length_i):
         for j in numba.prange(i, length_i):
             kernel_[i, j] = kernel_[j, i] = kernel_function(x_i[i], x_i[j], kernel_parameter)
@@ -55,8 +55,8 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 
 @numba.jit()
 def train_kernel_perceptron(train_y, kernel_matrix, num_classes):
-    alphas = np.zeros((num_classes, train_y.shape[0]))
-    best_alphas = np.zeros_like(alphas)
+    alphas = np.zeros((num_classes, train_y.shape[0]), dtype=np.float64)
+    best_alphas = np.zeros_like(alphas, dtype=np.float64)
     error, last_error = 0, train_y.shape[0] + 1
     while True:
         error = 0

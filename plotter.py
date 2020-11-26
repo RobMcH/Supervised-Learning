@@ -10,8 +10,10 @@ def plot_confusion_matrix(mean_matrix, std_matrix, num_classes, title, fn):
     labels = np.array(labels).reshape(mean_matrix.shape)
     ticklabels = [i for i in range(num_classes)]
     plt.figure(figsize=(15, 15), dpi=300)
-    sns.heatmap(mean_matrix, annot=labels, fmt='', cmap=sns.color_palette("crest", as_cmap=True),
-                xticklabels=ticklabels, yticklabels=ticklabels)
+    sns.set(font_scale=1.4)
+    ax = sns.heatmap(mean_matrix, annot=labels, fmt='', cmap=sns.color_palette("crest", as_cmap=True),
+                     xticklabels=ticklabels, yticklabels=ticklabels)
+    ax.xaxis.set_ticks_position('top')
     plt.xlabel("Predicted class")
     plt.ylabel("True class")
     plt.title(title)
