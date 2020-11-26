@@ -1,9 +1,9 @@
 import numpy as np
-import numba
 from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, kernel_perceptron_evaluate, \
     kernel_perceptron_predict_class, polynomial_kernel, gaussian_kernel
 from data import read_data, random_split_indices, rng
-from utils import KFold
+from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, errors_to_latex_table,\
+    matrices_to_latex_table
 
 
 def task_1_1(kernel_function, kernel_parameters):
@@ -91,40 +91,17 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False):
         parameter_mean_std = (np.average(parameters), np.std(parameters))
         return test_errors_mean_std, parameter_mean_std
     else:
-        pass
-
-
-def errors_to_latex_table(train_errors, test_errors, kernel_parameters):
-    for i, k in enumerate(kernel_parameters):
-        (train_error, train_std), (test_error, test_std) = train_errors[i], test_errors[i]
-        print(f"\t{k} & ${train_error} \\pm {train_std}$ & ${test_error} \\pm {test_std}$ \\\\")
-
-
-@numba.njit()
-def generate_absolute_confusion_matrix(predictions, y, num_classes):
-    confusion_matrix = np.zeros((num_classes, num_classes))
-    assert predictions.shape == y.shape
-    # Calculate absolute number of confusions.
-    for i in range(predictions.shape[0]):
-        if y[i] != predictions[i]:
-            confusion_matrix[y[i], predictions[i]] += 1
-    return confusion_matrix
-
-
-def merge_confusion_matrices(confusion_matrices):
-    merged_matrix = np.array(confusion_matrices).sum(axis=0)
-    std_matrix = np.array(confusion_matrices).std(axis=0)
-    return merged_matrix, std_matrix
+        return merge_confusion_matrices(confusion_matrices)
 
 
 if __name__ == '__main__':
     # Polynomial kernel.
     dimensions = [i for i in range(1, 8)]
-    test_error, p = task_1_2(polynomial_kernel, dimensions)
-    print(test_error, p)
-    train_e, test_e = task_1_1(polynomial_kernel, dimensions)
-    errors_to_latex_table(train_e, test_e, dimensions)
+    """test_error, p = task_1_2(polynomial_kernel, dimensions)
+    print(test_error, p)"""
+    matrices_to_latex_table(*task_1_2(polynomial_kernel, dimensions, confusions=True))
+    # errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions), dimensions)
     # Gaussian kernel.
     cs = [0.5, 1.0, 2.0]
-    train_e, test_e = task_1_1(gaussian_kernel, cs)
-    errors_to_latex_table(train_e, test_e, cs)
+    matrices_to_latex_table(*task_1_2(gaussian_kernel, cs, confusions=True))
+    # errors_to_latex_table(*task_1_1(gaussian_kernel, cs), cs)

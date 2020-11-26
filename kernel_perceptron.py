@@ -4,18 +4,30 @@ import numba
 
 @numba.njit()
 def polynomial_kernel(p, q, d):
+    """
+    Implements a polynomial kernel (pq)^d.
+    :param p: First vector.
+    :param q: Second vector.
+    :param d: Kernel dimension.
+    """
     return np.power(np.dot(p, q), d)
 
 
 @numba.njit()
 def gaussian_kernel(p, q, c):
+    """
+    Implements a Gaussian kernel exp(-c ||p - q||^2)
+    :param p: First vector.
+    :param q: Second vector
+    :param c: Kernel parameter.
+    """
     return np.exp(-c * np.power(np.linalg.norm(p - q), 2))
 
 
 @numba.njit(parallel=True)
 def kernelise(x_i, x_j, kernel_function, kernel_parameter):
     """
-    Creates a gaussian kernel for kernel ridge regression based on the input data matrices X_i and X_j.
+    Creates a Gaussian kernel matrix based on the input data matrices x_i and x_j.
     """
     length_i, length_j = len(x_i), len(x_j)
     kernel_ = np.zeros((length_i, length_j))
@@ -27,6 +39,10 @@ def kernelise(x_i, x_j, kernel_function, kernel_parameter):
 
 @numba.njit(parallel=True)
 def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
+    """
+    Creates a Gaussian kernel matrix based on the input data matrix x_i. This method makes use of the symmetry of the
+    resulting kernel and should be used whenever possible (in comparison with the kernelise method).
+    """
     length_i = len(x_i)
     kernel_ = np.zeros((length_i, length_i))
     for i in numba.prange(length_i):
@@ -57,15 +73,27 @@ def train_kernel_perceptron(train_y, kernel_matrix, num_classes):
 
 @numba.njit()
 def kernel_perceptron_predict(kernel_matrix, alphas):
+    """
+    Returns a matrix of regression values given the kernel matrix and the alphas. Each row corresponds to one
+    class, and each column to an example.
+    """
     return alphas @ kernel_matrix
 
 
 def kernel_perceptron_predict_class(kernel_matrix, alphas):
+    """
+    Returns a vector of class predictions for a given kernel matrix and the alphas. Each entry of the vector corresponds
+    to the predicted class for an example.
+    """
     predictions = kernel_perceptron_predict(kernel_matrix, alphas)
     return np.argmax(predictions, axis=0).reshape(-1, 1)
 
 
 def kernel_perceptron_evaluate(test_y, kernel_matrix, alphas):
+    """
+    Calculate the error (percentage of wrong predictions) for a given vector of true labels test_y, a kernel matrix,
+    and the alphas.
+    """
     mistakes, total = 0, test_y.shape[0]
     predictions = kernel_perceptron_predict_class(kernel_matrix, alphas)
     mistakes = (predictions != test_y).sum()
