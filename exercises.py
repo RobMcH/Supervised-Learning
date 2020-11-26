@@ -46,7 +46,7 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False):
     test_errors, parameters = [], []
     confusion_matrices = []
     num_classes = 10
-    for epoch in tqdm(range(5)):
+    for epoch in tqdm(range(20)):
         best_parameter_matrix, best_parameter = None, 0
         train_indices, test_indices = None, None
         kfold_test_error, last_error = 0.0, 100.0
@@ -102,13 +102,11 @@ if __name__ == '__main__':
     print(test_error, p)"""
     mean_p_matrix, std_p_matrix = task_1_2(polynomial_kernel, dimensions, confusions=True)
     matrices_to_latex_table(mean_p_matrix, std_p_matrix)
-    plot_confusion_matrix(mean_p_matrix, std_p_matrix, 10, "Confusion matrix for polynomial kernel",
-                          "plots/polynommial_confusion_matrix")
+    plot_confusion_matrix(mean_p_matrix, std_p_matrix, 10, "plots/polynommial_confusion_matrix")
     # errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions), dimensions)
     # Gaussian kernel.
     cs = [0.5, 1.0, 2.0]
     mean_g_matrix, std_g_matrix = task_1_2(gaussian_kernel, cs, confusions=True)
     matrices_to_latex_table(mean_g_matrix, std_g_matrix)
-    plot_confusion_matrix(mean_g_matrix, std_g_matrix, 10, "Confusion matrix for Gaussian kernel",
-                          "plots/gaussian_confusion_matrix")
+    plot_confusion_matrix(mean_g_matrix, std_g_matrix, 10, "plots/gaussian_confusion_matrix")
     # errors_to_latex_table(*task_1_1(gaussian_kernel, cs), cs)
