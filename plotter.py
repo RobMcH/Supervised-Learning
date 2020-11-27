@@ -9,7 +9,7 @@ def plot_confusion_matrix(mean_matrix, std_matrix, num_classes, fn):
         labels.extend([f"{mean_matrix[i][j]} ± {std_matrix[i][j]}" for j in range(mean_matrix.shape[1])])
     labels = np.array(labels).reshape(mean_matrix.shape)
     ticklabels = [i for i in range(num_classes)]
-    plt.figure(figsize=(15, 15), dpi=300)
+    plt.figure(figsize=(16, 16), dpi=300)
     ax = sns.heatmap(mean_matrix, annot=labels, fmt='', cmap=sns.color_palette("crest", as_cmap=True),
                      xticklabels=ticklabels, yticklabels=ticklabels)
     plt.tick_params(axis='both', which='major', labelsize=10, labelbottom=False, bottom=False, top=False, left=False,

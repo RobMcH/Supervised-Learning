@@ -95,18 +95,22 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False):
         return merge_confusion_matrices(confusion_matrices)
 
 
+def task_1_3(kernel_function, kernel_parameters):
+    return task_1_2(kernel_function, kernel_parameters, confusions=True)
+
+
 if __name__ == '__main__':
     # Polynomial kernel.
     dimensions = [i for i in range(1, 8)]
     """test_error, p = task_1_2(polynomial_kernel, dimensions)
     print(test_error, p)"""
-    mean_p_matrix, std_p_matrix = task_1_2(polynomial_kernel, dimensions, confusions=True)
+    mean_p_matrix, std_p_matrix = task_1_3(polynomial_kernel, dimensions)
     matrices_to_latex_table(mean_p_matrix, std_p_matrix)
     plot_confusion_matrix(mean_p_matrix, std_p_matrix, 10, "plots/polynommial_confusion_matrix")
     # errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions), dimensions)
     # Gaussian kernel.
     cs = [0.5, 1.0, 2.0]
-    mean_g_matrix, std_g_matrix = task_1_2(gaussian_kernel, cs, confusions=True)
+    mean_g_matrix, std_g_matrix = task_1_3(gaussian_kernel, cs)
     matrices_to_latex_table(mean_g_matrix, std_g_matrix)
     plot_confusion_matrix(mean_g_matrix, std_g_matrix, 10, "plots/gaussian_confusion_matrix")
     # errors_to_latex_table(*task_1_1(gaussian_kernel, cs), cs)
