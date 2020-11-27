@@ -54,7 +54,7 @@ def generate_absolute_confusion_matrix(predictions, y, num_classes):
 def merge_confusion_matrices(confusion_matrices):
     # Merge multiple confusion matrices into a single one containing the mean, and one containing the std. deviations.
     merged_matrix = np.average(np.array(confusion_matrices), axis=0)
-    std_matrix = np.around(np.array(confusion_matrices).std(axis=0), 3)
+    std_matrix = np.around(np.array(confusion_matrices).std(axis=0), 2)
     return merged_matrix, std_matrix
 
 

@@ -10,7 +10,7 @@ def plot_confusion_matrix(mean_matrix, std_matrix, num_classes, fn):
     labels = np.array(labels).reshape(mean_matrix.shape)
     ticklabels = [i for i in range(num_classes)]
     plt.figure(figsize=(16, 16), dpi=300)
-    ax = sns.heatmap(mean_matrix, annot=labels, fmt='', cmap=sns.color_palette("crest", as_cmap=True),
+    ax = sns.heatmap(mean_matrix, annot=labels, fmt='', cmap=sns.color_palette("flare", as_cmap=True),
                      xticklabels=ticklabels, yticklabels=ticklabels)
     plt.tick_params(axis='both', which='major', labelsize=10, labelbottom=False, bottom=False, top=False, left=False,
                     labeltop=True)
