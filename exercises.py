@@ -102,7 +102,7 @@ def task_1_3(kernel_function, kernel_parameters):
 if __name__ == '__main__':
     # Kernel parameters for polynomial and Gaussian kernel.
     dimensions = [i for i in range(1, 8)]
-    cs = [0.0001, 0.001, 0.01, 0.1, 0.2]
+    cs = np.arange(0.0001, 0.011, 0.0001)
     # Task 1.1
     # errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions), dimensions)
     errors_to_latex_table(*task_1_1(gaussian_kernel, cs), cs)
