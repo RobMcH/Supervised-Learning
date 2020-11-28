@@ -58,10 +58,14 @@ def train_kernel_perceptron(train_y, kernel_matrix, num_classes):
     alphas = np.zeros((num_classes, train_y.shape[0]), dtype=np.float64)
     best_alphas = np.zeros_like(alphas, dtype=np.float64)
     error, last_error = 0, train_y.shape[0] + 1
+    epoch = 1
     while True:
         error = 0
-        for i in range(len(train_y) - 1):
-            y_hat = np.argmax(np.dot(alphas[:, :i + 1], kernel_matrix[:i + 1, i + 1])) + 1
+        for i in range(len(train_y)):
+            if epoch == 1:
+                y_hat = np.argmax(np.dot(alphas[:, :i], kernel_matrix[:i, i])) + 1
+            else:
+                y_hat = np.argmax(np.dot(alphas, kernel_matrix[:, i])) + 1
             y = train_y[i, 0] + 1
             error += 1 if y_hat != y else 0
             alphas[y_hat - 1, i] -= y
@@ -70,6 +74,7 @@ def train_kernel_perceptron(train_y, kernel_matrix, num_classes):
             break
         last_error = error
         best_alphas = alphas
+        epoch += 1
     return best_alphas
 
 
