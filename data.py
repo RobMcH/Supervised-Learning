@@ -1,5 +1,6 @@
 import numpy as np
 
+
 rng = np.random.default_rng(42)
 
 
@@ -20,6 +21,7 @@ def random_split_indices(indices, training_proportion):
     :param training_proportion: Specifies which proportion of the indices will end up in the set of training indices.
     :return: (training indices, testing indices).
     """
-    split_index = int(indices.shape[0] * training_proportion)
-    rng.shuffle(indices)
-    return indices[:split_index], indices[split_index:]
+    ind = np.copy(indices)
+    split_index = int(ind.shape[0] * training_proportion)
+    rng.shuffle(ind)
+    return ind[:split_index], ind[split_index:]

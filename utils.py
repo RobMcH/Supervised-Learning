@@ -6,13 +6,12 @@ class KFold:
     A class for generating k-fold train/test splits for cross-validation.
     """
 
-    def __init__(self, indices, k, rng):
+    def __init__(self, indices, k):
         """
         After the class has been initialised it can be iterated over to get one of the k different train/test splits.
         :param data: The data that is supposed to be split into k different train/test splits.
         :param k: The parameter k specifies how many folds are generated.
         """
-        rng.shuffle(indices)
         self.indices = np.array_split(indices, k)
         self.i = 0
         self.k = k
