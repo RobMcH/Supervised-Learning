@@ -111,7 +111,7 @@ if __name__ == '__main__':
     # Task 1.3
     mean_p_matrix, std_p_matrix = task_1_3(polynomial_kernel, dimensions)
     matrices_to_latex_table(mean_p_matrix, std_p_matrix)
-    plot_confusion_matrix(mean_p_matrix, std_p_matrix, 10, "plots/polynommial_confusion_matrix")
+    plot_confusion_matrix(mean_p_matrix, std_p_matrix, 10, "plots/polynommial_confusion_matrix.pdf")
     mean_g_matrix, std_g_matrix = task_1_3(gaussian_kernel, cs)
     matrices_to_latex_table(mean_g_matrix, std_g_matrix)
-    plot_confusion_matrix(mean_g_matrix, std_g_matrix, 10, "plots/gaussian_confusion_matrix")
+    plot_confusion_matrix(mean_g_matrix, std_g_matrix, 10, "plots/gaussian_confusion_matrix.pdf")
