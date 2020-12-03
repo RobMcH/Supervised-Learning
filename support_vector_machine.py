@@ -1,7 +1,6 @@
 import numpy as np
-import cvxopt
-import numba
-from kernel_perceptron import polynomial_kernel, gaussian_kernel
+from kernel_perceptron import polynomial_kernel, gaussian_kernel, kernelise_symmetric
+from data import read_data
 
 
 # TODO SVM with Sequential Minimal Optimization algorithm.
@@ -9,11 +8,11 @@ from kernel_perceptron import polynomial_kernel, gaussian_kernel
 
 def calculate_line_bounds(y_1, y_2, alpha_1, alpha_2, C):
     if y_1 != y_2:
-        L = np.max(0, alpha_2 - alpha_1)
-        H = np.min(C, C + alpha_2 - alpha_1)
+        L = np.maximum(0.0, alpha_2 - alpha_1)
+        H = np.minimum(C, C + alpha_2 - alpha_1)
     else:
-        L = np.max(0, alpha_2 + alpha_1 - C)
-        H = np.min(C, alpha_2 + alpha_1)
+        L = np.maximum(0.0, alpha_2 + alpha_1 - C)
+        H = np.minimum(C, alpha_2 + alpha_1)
     return L, H
 
 
@@ -22,14 +21,18 @@ def objective_function(alphas, kernel_matrix, ys):
                                     @ (alphas.reshape((-1, 1)) @ alphas.reshape((1, -1)))))
 
 
+def predict(alphas, train_y, kernel_matrix, b):
+    return (alphas * train_y) @ kernel_matrix - b
+
+
 def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
     if i_1 == i_2:
         return 0, b
     alpha_1, y_1 = alphas[i_1], train_y[i_1]
     alpha_2, y_2 = alphas[i_2], train_y[i_2]
-    error_1 = errors[i_1] - y_1
-    error_2 = errors[i_2] - y_2
-    s = y_1 * train_y[i_2]
+    error_1 = errors[i_1]
+    error_2 = errors[i_2]
+    s = y_1 * y_2
     L, H = calculate_line_bounds(y_1, y_2, alpha_1, alpha_2, C)
     if L == H:
         return 0, b
@@ -48,10 +51,10 @@ def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
             alpha_2_new = L
         elif Lobj < Hobj - 1e-3:
             alpha_2_new = H
-    if alpha_2_new < 1e-3:
+    """if alpha_2_new < 1e-8:
         alpha_2_new = 0
-    elif alpha_2_new > C - 1e-3:
-        alpha_2_new = C
+    elif alpha_2_new > C - 1e-8:
+        alpha_2_new = C"""
     if np.abs(alpha_2_new - alpha_2) < 1e-3 * (alpha_2_new + alpha_2 + 1e-3):
         return 0, b
 
@@ -82,12 +85,13 @@ def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
 
 
 def examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b, rng):
-    alpha_2, y_2, error_2 = alphas[i_2], train_y[i_2], errors[i_2]
+    alpha_2, y_2 = alphas[i_2], train_y[i_2]
+    error_2 = errors[i_2]
     r2 = error_2 * y_2
     if (r2 < -1e-3 and alpha_2 < C) or (r2 > 1e-3 and alpha_2 > 0):
         non_c_0_alpha = np.where((alphas != 0) & (alphas != C), True, False)
         alpha_indices = np.arange(0, len(non_c_0_alpha))
-        if len(non_c_0_alpha) > 1:
+        if np.count_nonzero(non_c_0_alpha) > 1:
             if error_2 > 0:
                 i_1 = np.argmin(errors)
             else:
@@ -109,20 +113,29 @@ def examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b, rng):
 def train_svm(kernel_matrix, train_y, C):
     rng = np.random.default_rng(42)
     alphas, b = np.zeros(kernel_matrix.shape[0]), 0.0
-    errors = np.zeros_like(alphas)
+    errors = np.zeros_like(alphas, dtype=np.float64) - train_y
     num_changed, examine_all = 0, True
     while num_changed > 0 or examine_all:
         num_changed = 0
         if examine_all:
-            for i in range(kernel_matrix.shape[0]):
-                nc, b = examine_example(i, train_y, alphas, errors, C, kernel_matrix, b, rng)
+            for i_2 in range(kernel_matrix.shape[0]):
+                nc, b = examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b, rng)
                 num_changed += nc
         else:
-            for i in range(np):
-                nc, b = examine_example(i, train_y, alphas, errors, C, kernel_matrix, b, rng)
+            indices = np.arange(0, len(alphas))[np.where((alphas != 0) & (alphas != C), True, False)]
+            for i_2 in indices:
+                nc, b = examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b, rng)
                 num_changed += nc
         if examine_all:
             examine_all = False
         elif num_changed == 0:
             examine_all = True
     pass
+
+
+if __name__ == '__main__':
+    x, y = read_data("data/zipcombo.dat")
+    y[y != 1] = -1
+    y = y.squeeze()
+    kernel_matrix = kernelise_symmetric(x, polynomial_kernel, 2)
+    train_svm(kernel_matrix, y, 1000)
