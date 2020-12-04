@@ -1,7 +1,7 @@
 import numpy as np
 from kernel_perceptron import polynomial_kernel, gaussian_kernel, kernelise_symmetric
 from data import read_data
-
+from sklearn.datasets import make_blobs
 
 # TODO SVM with Sequential Minimal Optimization algorithm.
 
@@ -115,7 +115,9 @@ def train_svm(kernel_matrix, train_y, C):
     alphas, b = np.zeros(kernel_matrix.shape[0]), 0.0
     errors = np.zeros_like(alphas, dtype=np.float64) - train_y
     num_changed, examine_all = 0, True
+    best_alphas, best_b, lowest_error = None, None, 100.0
     while num_changed > 0 or examine_all:
+        print(f"Examine all: {examine_all}, num changed: {num_changed}")
         num_changed = 0
         if examine_all:
             for i_2 in range(kernel_matrix.shape[0]):
@@ -123,6 +125,7 @@ def train_svm(kernel_matrix, train_y, C):
                 num_changed += nc
         else:
             indices = np.arange(0, len(alphas))[np.where((alphas != 0) & (alphas != C), True, False)]
+            print(f"Length of indices: {len(indices)}")
             for i_2 in indices:
                 nc, b = examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b, rng)
                 num_changed += nc
@@ -130,12 +133,35 @@ def train_svm(kernel_matrix, train_y, C):
             examine_all = False
         elif num_changed == 0:
             examine_all = True
-    pass
+        predictions = predict(alphas, train_y, kernel_matrix, b)
+        predictions[predictions < 0] = -1
+        predictions[predictions >= 0] = 1
+        error = 100.0 - (np.sum(predictions == train_y) / len(train_y) * 100)
+        if error < lowest_error:
+            print(f"Error: {error}")
+            lowest_error = error
+            best_alphas = np.copy(alphas)
+            best_b = b
+        else:
+            break
+    return best_alphas, best_b
+
+
+def train_ova_svm(kernel_matrix, train_y, C, num_classes):
+    alpha_w, b_w = [], []
+    for i in range(num_classes):
+        print(f"Training OvA classifier for class {i}.")
+        temp_y = np.copy(train_y)
+        temp_y[y != i] = -1
+        temp_y[y == i] = 1
+        alpha, b = train_svm(kernel_matrix, temp_y, C)
+        alpha_w.append(alpha)
+        b_w.append(b)
+    return alpha_w, b_w
 
 
 if __name__ == '__main__':
     x, y = read_data("data/zipcombo.dat")
-    y[y != 1] = -1
     y = y.squeeze()
-    kernel_matrix = kernelise_symmetric(x, polynomial_kernel, 2)
-    train_svm(kernel_matrix, y, 1000)
+    kernel_matrix = kernelise_symmetric(x, gaussian_kernel, 0.1)
+    train_ova_svm(kernel_matrix, y, 1, 10)

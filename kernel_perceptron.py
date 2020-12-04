@@ -73,7 +73,7 @@ def train_kernel_perceptron(train_y, kernel_matrix, num_classes):
         if error >= last_error:
             break
         last_error = error
-        best_alphas = alphas
+        best_alphas = np.copy(alphas)
         epoch += 1
     return best_alphas
 
