@@ -1,11 +1,10 @@
 import numpy as np
 from kernel_perceptron import polynomial_kernel, gaussian_kernel, kernelise_symmetric
-from data import read_data
-from sklearn.datasets import make_blobs
-
-# TODO SVM with Sequential Minimal Optimization algorithm.
+from data import read_data, random_split_indices
+import numba
 
 
+@numba.njit()
 def calculate_line_bounds(y_1, y_2, alpha_1, alpha_2, C):
     if y_1 != y_2:
         L = np.maximum(0.0, alpha_2 - alpha_1)
@@ -16,15 +15,18 @@ def calculate_line_bounds(y_1, y_2, alpha_1, alpha_2, C):
     return L, H
 
 
+@numba.njit()
 def objective_function(alphas, kernel_matrix, ys):
     return np.sum(alphas) - np.sum((ys.reshape((-1, 1)) @ ys.reshape((1, -1)) @ kernel_matrix
                                     @ (alphas.reshape((-1, 1)) @ alphas.reshape((1, -1)))))
 
 
+@numba.njit()
 def predict(alphas, train_y, kernel_matrix, b):
     return (alphas * train_y) @ kernel_matrix - b
 
 
+@numba.njit()
 def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
     if i_1 == i_2:
         return 0, b
@@ -39,7 +41,7 @@ def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
     eta = 2 * kernel_matrix[i_1, i_2] - kernel_matrix[i_1, i_1] - kernel_matrix[i_2, i_2]
     if eta < 0:
         alpha_2_new = alpha_2 - y_2 * (error_1 - error_2) / eta
-        alpha_2_new = np.clip(alpha_2_new, L, H)
+        alpha_2_new = np.minimum(np.maximum(L, alpha_2_new), H)
     else:
         temp_alphas = np.copy(alphas)
         temp_alphas[i_2] = L
@@ -117,7 +119,6 @@ def train_svm(kernel_matrix, train_y, C):
     num_changed, examine_all = 0, True
     best_alphas, best_b, lowest_error = None, None, 100.0
     while num_changed > 0 or examine_all:
-        print(f"Examine all: {examine_all}, num changed: {num_changed}")
         num_changed = 0
         if examine_all:
             for i_2 in range(kernel_matrix.shape[0]):
@@ -125,7 +126,6 @@ def train_svm(kernel_matrix, train_y, C):
                 num_changed += nc
         else:
             indices = np.arange(0, len(alphas))[np.where((alphas != 0) & (alphas != C), True, False)]
-            print(f"Length of indices: {len(indices)}")
             for i_2 in indices:
                 nc, b = examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b, rng)
                 num_changed += nc
@@ -138,7 +138,6 @@ def train_svm(kernel_matrix, train_y, C):
         predictions[predictions >= 0] = 1
         error = 100.0 - (np.sum(predictions == train_y) / len(train_y) * 100)
         if error < lowest_error:
-            print(f"Error: {error}")
             lowest_error = error
             best_alphas = np.copy(alphas)
             best_b = b
@@ -152,16 +151,31 @@ def train_ova_svm(kernel_matrix, train_y, C, num_classes):
     for i in range(num_classes):
         print(f"Training OvA classifier for class {i}.")
         temp_y = np.copy(train_y)
-        temp_y[y != i] = -1
-        temp_y[y == i] = 1
+        temp_y[train_y != i] = -1.0
+        temp_y[train_y == i] = 1.0
         alpha, b = train_svm(kernel_matrix, temp_y, C)
         alpha_w.append(alpha)
         b_w.append(b)
     return alpha_w, b_w
 
 
+def ova_predict(alpha_w, b_w, train_y, kernel_matrix):
+    predictions = []
+    for i in range(len(alpha_w)):
+        temp_y = np.copy(train_y)
+        temp_y[train_y != i] = -1.0
+        temp_y[train_y == i] = 1.0
+        predictions.append(predict(alpha_w[i], temp_y, kernel_matrix, b_w[i]))
+    return np.argmax(np.array(predictions), axis=0)
+
+
 if __name__ == '__main__':
     x, y = read_data("data/zipcombo.dat")
-    y = y.squeeze()
+    y = y.squeeze().astype(np.float64)
     kernel_matrix = kernelise_symmetric(x, gaussian_kernel, 0.1)
-    train_ova_svm(kernel_matrix, y, 1, 10)
+    indices = np.arange(0, len(y))
+    train_indices, test_indices = random_split_indices(indices, 0.8)
+    alpha, b = train_ova_svm(kernel_matrix[train_indices, train_indices.reshape((-1, 1))], y[train_indices], 2, 10)
+    predictions = ova_predict(alpha, b, y[train_indices], kernel_matrix[train_indices.reshape((-1, 1)), test_indices])
+    accuracy = np.sum(predictions == y[test_indices]) / len(y[test_indices]) * 100
+    print(f"Test error: {100.0 - accuracy}")
