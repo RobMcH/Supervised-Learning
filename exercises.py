@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import tqdm
-from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, kernel_perceptron_evaluate, \
-    kernel_perceptron_predict_class, polynomial_kernel, gaussian_kernel
+from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, train_ova_kernel_perceptron, \
+    kernel_perceptron_evaluate, kernel_perceptron_predict_class, polynomial_kernel, gaussian_kernel
 from support_vector_machine import train_ova_svm, evaluate_svm
 from data import read_data, random_split_indices
 from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, errors_to_latex_table,\
@@ -38,6 +38,10 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
                 alphas, b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C, num_classes)
                 train_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[train_indices], train_kernel_matrix)
                 test_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[test_indices], test_kernel_matrix)
+            elif classifier == "OvA-Perceptron":
+                alphas = train_ova_kernel_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
+                train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
+                test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
             train_errors[index].append(train_error)
             test_errors[index].append(test_error)
 
@@ -109,10 +113,11 @@ if __name__ == '__main__':
     dimensions = [i for i in range(1, 8)]
     cs = [0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     # Task 1.1
-    errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=1.0), cs)
-    errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=10.0), cs)
+    errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier="OvA-Perceptron"), dimensions)
+    errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="OvA-Perceptron"), cs)
     errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions), dimensions)
     errors_to_latex_table(*task_1_1(gaussian_kernel, cs), cs)
+    errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=1.0), cs)
     # Task 1.2
     print(*task_1_2(polynomial_kernel, dimensions))
     print(*task_1_2(gaussian_kernel, cs))

@@ -96,6 +96,31 @@ def kernel_perceptron_predict_class(kernel_matrix, alphas):
     return np.argmax(predictions, axis=0).reshape(-1, 1)
 
 
+@numba.jit()
+def train_ova_kernel_perceptron(train_y, kernel_matrix, num_classes):
+    alphas = np.zeros((num_classes, train_y.shape[0]))
+    best_alphas = None
+    error, last_error = 0, train_y.shape[0] * num_classes + 1
+    epoch = 1
+    while True:
+        for classifier in range(1, num_classes + 1):
+            for i in range(len(train_y)):
+                if epoch == 1:
+                    y_hat = -1 if np.dot(kernel_matrix[:i, i], alphas[classifier - 1, :i]) < 0 else 1
+                else:
+                    y_hat = -1 if np.dot(kernel_matrix[:, i], alphas[classifier - 1]) < 0 else 1
+                y = -1 if train_y[i] != classifier else 1
+                if y_hat != y:
+                    alphas[classifier - 1, i] += y
+                    error += 1
+        if error < last_error:
+            best_alphas = np.copy(alphas)
+        else:
+            break
+        last_error = error
+    return best_alphas
+
+
 def kernel_perceptron_evaluate(test_y, kernel_matrix, alphas):
     """
     Calculate the error (percentage of wrong predictions) for a given vector of true labels test_y, a kernel matrix,
