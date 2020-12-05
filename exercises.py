@@ -2,14 +2,17 @@ import numpy as np
 from tqdm import tqdm
 from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, kernel_perceptron_evaluate, \
     kernel_perceptron_predict_class, polynomial_kernel, gaussian_kernel
+from support_vector_machine import train_ova_svm, evaluate_svm
 from data import read_data, random_split_indices
 from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, errors_to_latex_table,\
     matrices_to_latex_table
 from plotter import plot_confusion_matrix
 
 
-def task_1_1(kernel_function, kernel_parameters):
+def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None):
     x_data, y_data = read_data("data/zipcombo.dat")
+    if classifier == "SVM":
+        y_data = y_data.squeeze().astype(np.float64)
     indices = np.arange(0, x_data.shape[0])
     train_errors = {i: [] for i, j in enumerate(kernel_parameters)}
     test_errors = {i: [] for i, j in enumerate(kernel_parameters)}
@@ -26,13 +29,16 @@ def task_1_1(kernel_function, kernel_parameters):
             # Get random train/test indices, calculate kernel matrix, and calculate alphas.
             train_indices, test_indices = index_splits[epoch]
             train_kernel_matrix = kernel_matrix[train_indices, train_indices.reshape((-1, 1))]
-            alphas = train_kernel_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
-            # Calculate training error.
-            train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
-            train_errors[index].append(train_error)
-            # Calculate test error.
             test_kernel_matrix = kernel_matrix[train_indices.reshape((-1, 1)), test_indices]
-            test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
+            if classifier == "Perceptron":
+                alphas = train_kernel_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
+                train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
+                test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
+            elif classifier == "SVM":
+                alphas, b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C, num_classes)
+                train_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[train_indices], train_kernel_matrix)
+                test_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[test_indices], test_kernel_matrix)
+            train_errors[index].append(train_error)
             test_errors[index].append(test_error)
 
     # Analyse results.
@@ -101,8 +107,10 @@ def task_1_3(kernel_function, kernel_parameters):
 if __name__ == '__main__':
     # Kernel parameters for polynomial and Gaussian kernel.
     dimensions = [i for i in range(1, 8)]
-    cs = 10.0 ** np.arange(-4, 1)
+    cs = [0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     # Task 1.1
+    errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=1.0), cs)
+    errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=10.0), cs)
     errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions), dimensions)
     errors_to_latex_table(*task_1_1(gaussian_kernel, cs), cs)
     # Task 1.2
