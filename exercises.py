@@ -113,10 +113,13 @@ if __name__ == '__main__':
     dimensions = [i for i in range(1, 8)]
     cs = [0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     # Task 1.1
+    print("OvA Perceptron")
     errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier="OvA-Perceptron"), dimensions)
     errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="OvA-Perceptron"), cs)
+    print("Perceptron")
     errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions), dimensions)
     errors_to_latex_table(*task_1_1(gaussian_kernel, cs), cs)
+    print("SVM")
     errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=1.0), cs)
     # Task 1.2
     print(*task_1_2(polynomial_kernel, dimensions))

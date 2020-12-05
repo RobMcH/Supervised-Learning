@@ -55,9 +55,9 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 
 @numba.jit()
 def train_kernel_perceptron(train_y, kernel_matrix, num_classes):
-    alphas = np.zeros((num_classes, train_y.shape[0]), dtype=np.float64)
+    alphas = np.zeros((num_classes, len(train_y)), dtype=np.float64)
     best_alphas = np.zeros_like(alphas, dtype=np.float64)
-    error, last_error = 0, train_y.shape[0] + 1
+    error, last_error = 0, len(train_y) + 1
     epoch = 1
     while True:
         error = 0
@@ -98,26 +98,27 @@ def kernel_perceptron_predict_class(kernel_matrix, alphas):
 
 @numba.jit()
 def train_ova_kernel_perceptron(train_y, kernel_matrix, num_classes):
-    alphas = np.zeros((num_classes, train_y.shape[0]))
+    alphas = np.zeros((num_classes, len(train_y)), dtype=np.float64)
     best_alphas = None
-    error, last_error = 0, train_y.shape[0] * num_classes + 1
+    error, last_error = 0, len(train_y) * num_classes + 1
     epoch = 1
     while True:
+        error = 0
         for classifier in range(1, num_classes + 1):
             for i in range(len(train_y)):
                 if epoch == 1:
-                    y_hat = -1 if np.dot(kernel_matrix[:i, i], alphas[classifier - 1, :i]) < 0 else 1
+                    y_hat = -1 if np.dot(alphas[classifier - 1, :i], kernel_matrix[:i, i]) < 0 else 1
                 else:
-                    y_hat = -1 if np.dot(kernel_matrix[:, i], alphas[classifier - 1]) < 0 else 1
-                y = -1 if train_y[i] != classifier else 1
+                    y_hat = -1 if np.dot(alphas[classifier - 1, :], kernel_matrix[:, i]) < 0 else 1
+                y = -1 if train_y[i, 0] != classifier - 1 else 1
                 if y_hat != y:
                     alphas[classifier - 1, i] += y
                     error += 1
-        if error < last_error:
-            best_alphas = np.copy(alphas)
-        else:
+        if error >= last_error:
             break
+        best_alphas = np.copy(alphas)
         last_error = error
+        epoch += 1
     return best_alphas
 
 
