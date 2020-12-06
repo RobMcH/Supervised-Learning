@@ -21,3 +21,12 @@ def plot_confusion_matrix(mean_matrix, std_matrix, num_classes, fn):
     plt.savefig(fn)
 
 
+def plot_images(images, labels):
+    images = np.vsplit(images, images.shape[0])
+    for i, image in enumerate(images):
+        image = image.reshape((16, 16))
+        fig = plt.figure()
+        plt.imshow(image, cmap='gray', vmin=-1.0, vmax=1.0)
+        plt.title(f"Sample picture {i + 1} with class {labels[i]}")
+        plt.axis("off")
+        plt.savefig(f"plots/hardest_sample_{i + 1}.pdf", bbox_inches='tight')
