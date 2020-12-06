@@ -19,23 +19,20 @@ def calculate_line_bounds(y_1, y_2, alpha_1, alpha_2, C):
 
 @numba.njit()
 def objective_function(alphas, kernel_matrix, ys):
-    return np.sum(alphas) - np.sum((ys.reshape((-1, 1)) @ ys.reshape((1, -1)) @ kernel_matrix
-                                    @ (alphas.reshape((-1, 1)) @ alphas.reshape((1, -1)))))
+    return np.sum(alphas) - np.sum(np.outer(ys, ys) @ kernel_matrix @ np.outer(alphas, alphas))
 
 
 @numba.njit()
 def predict(alphas, train_y, kernel_matrix, b):
-    return (alphas * train_y) @ kernel_matrix - b
+    return np.outer(alphas, train_y) @ kernel_matrix - b
 
 
 @numba.njit()
 def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
     if i_1 == i_2:
         return 0, b
-    alpha_1, y_1 = alphas[i_1], train_y[i_1]
-    alpha_2, y_2 = alphas[i_2], train_y[i_2]
-    error_1 = errors[i_1]
-    error_2 = errors[i_2]
+    alpha_1, y_1, error_1 = alphas[i_1], train_y[i_1], errors[i_1]
+    alpha_2, y_2, error_2 = alphas[i_2], train_y[i_2], errors[i_2]
     s = y_1 * y_2
     L, H = calculate_line_bounds(y_1, y_2, alpha_1, alpha_2, C)
     if L == H:
@@ -86,8 +83,7 @@ def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
 
 @numba.njit()
 def examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b):
-    alpha_2, y_2 = alphas[i_2], train_y[i_2]
-    error_2 = errors[i_2]
+    alpha_2, y_2, error_2 = alphas[i_2], train_y[i_2], errors[i_2]
     r2 = error_2 * y_2
     if (r2 < -1e-3 and alpha_2 < C) or (r2 > 1e-3 and alpha_2 > 0):
         non_c_0_alpha = np.where((alphas != 0) & (alphas != C), True, False)
@@ -113,11 +109,11 @@ def examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b):
 
 @numba.njit()
 def train_svm(kernel_matrix, train_y, C, max_iterations=100):
+    # Initialise alphas, b, and errors.
     alphas, b = np.zeros(kernel_matrix.shape[0]), 0.0
     errors = np.zeros_like(alphas, dtype=np.float64) - train_y
     num_changed, examine_all = 0, True
-    best_alphas, best_b, lowest_error = None, None, 100.0
-    epoch = 0
+    best_alphas, best_b, lowest_error, epoch = None, None, 100.0, 1
     while num_changed > 0 or examine_all:
         num_changed = 0
         if examine_all:
@@ -133,15 +129,18 @@ def train_svm(kernel_matrix, train_y, C, max_iterations=100):
             examine_all = False
         elif num_changed == 0:
             examine_all = True
+        # Calculate current training error.
         predictions = predict(alphas, train_y, kernel_matrix, b)
         predictions[predictions < 0] = -1
         predictions[predictions >= 0] = 1
         error = 100.0 - (np.sum(predictions == train_y) / len(train_y) * 100)
         epoch += 1
+        # Save weights if the training error decreased.
         if error < lowest_error:
             lowest_error = error
             best_alphas = np.copy(alphas)
             best_b = b
+        # Stop after max iterations.
         if epoch > max_iterations:
             break
     return best_alphas, best_b
@@ -149,6 +148,7 @@ def train_svm(kernel_matrix, train_y, C, max_iterations=100):
 
 def train_ova_svm(kernel_matrix, train_y, C, num_classes):
     alpha_w, b_w = [], []
+    # Train num_classes OvA SVMs.
     for i in range(num_classes):
         temp_y = np.copy(train_y)
         temp_y[train_y != i] = -1.0
@@ -161,27 +161,16 @@ def train_ova_svm(kernel_matrix, train_y, C, num_classes):
 
 def ova_predict(alpha_w, b_w, train_y, kernel_matrix):
     predictions = []
+    # Loop over OvA classifiers and collect the predictions of each of them.
     for i in range(len(alpha_w)):
         temp_y = np.copy(train_y)
         temp_y[train_y != i] = -1.0
         temp_y[train_y == i] = 1.0
         predictions.append(predict(alpha_w[i], temp_y, kernel_matrix, b_w[i]))
+    # Stack the predictions and get the argmax of each column (i.e., of every data point).
     return np.argmax(np.array(predictions), axis=0)
 
 
 def evaluate_svm(alphas, b, train_y, test_y, kernel_matrix):
     predictions = ova_predict(alphas, b, train_y, kernel_matrix)
     return 100.0 - np.sum(predictions == test_y) / len(test_y) * 100
-
-
-if __name__ == '__main__':
-    x, y = read_data("data/zipcombo.dat")
-    y = y.squeeze().astype(np.float64)
-    kernel_matrix = kernelise_symmetric(x, gaussian_kernel, 0.10)
-    indices = np.arange(0, len(y))
-    train_indices, test_indices = random_split_indices(indices, 0.8)
-    for C in [0.25, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 15.0]:
-        alpha, b = train_ova_svm(kernel_matrix[train_indices, train_indices.reshape((-1, 1))], y[train_indices], C, 10)
-        predictions = ova_predict(alpha, b, y[train_indices], kernel_matrix[train_indices.reshape((-1, 1)), test_indices])
-        accuracy = np.sum(predictions == y[test_indices]) / len(y[test_indices]) * 100
-        print(f"C = {C} - Test error: {100.0 - accuracy}")

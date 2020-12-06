@@ -94,16 +94,14 @@ def train_kernel_perceptron(train_y, kernel_matrix, num_classes):
         for i in range(len(train_y)):
             if epoch == 1:
                 # In the first epoch the examples were only seen up to index i.
-                y_hat = np.argmax(np.dot(alphas[:, :i], kernel_matrix[:i, i])) + 1
+                y_hat = np.argmax(np.dot(alphas[:, :i], kernel_matrix[:i, i]))
             else:
                 # In all other epochs every example has already been seen at least once.
-                y_hat = np.argmax(np.dot(alphas, kernel_matrix[:, i])) + 1
-            # Define y as the correct class + 1 so that for examples from class 0 we don't just add/substract 0.
-            y = train_y[i, 0] + 1
+                y_hat = np.argmax(np.dot(alphas, kernel_matrix[:, i]))
             # Increase error counter and update weights.
-            error += 1 if y_hat != y else 0
-            alphas[y_hat - 1, i] -= y
-            alphas[y - 1, i] += y
+            error += 1 if y_hat != train_y[i, 0] else 0
+            alphas[y_hat, i] -= 1
+            alphas[train_y[i, 0], i] += 1
         # Stop training when training error stops decreasing.
         if error >= last_error:
             break

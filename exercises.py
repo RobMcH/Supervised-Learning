@@ -63,7 +63,7 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
     # Generate train/test splits by generating 20 index pairs.
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
     test_index_counts = np.bincount(np.array([index_splits[i][1] for i in range(20)]).reshape(-1),
-                                    minlength=len(index_splits[0][1]))
+                                    minlength=len(indices))
     kfold_test_errors = np.zeros((len(kernel_parameters), 20), dtype=np.float64)
 
     for index, kernel_parameter in enumerate(kernel_parameters):
@@ -122,13 +122,17 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
             predictions = kernel_perceptron_predict_class(test_kernel_matrix, best_alphas)
             confusion_matrix = generate_absolute_confusion_matrix(predictions, y_data[test_indices], num_classes)
             confusion_matrices.append(confusion_matrix)
+    # Find the hardest test examples and plot them.
     if classifier == "OvA-Perceptron":
-        errors = np.zeros(len(test_indices))
+        errors = np.zeros(len(indices))
         for i in range(len(error_vectors)):
-            errors += np.bincount(error_vectors[i], minlength=len(test_indices))
-        errors /= test_index_counts
-        hardest_samples = np.sort(errors)[-5:]
-        plot_images(x_data[hardest_samples], y_data[hardest_samples])
+            errors[index_splits[i][1][error_vectors[i].squeeze()]] += 1
+        with np.errstate(divide="ignore", invalid="ignore"):
+            errors = np.true_divide(errors, test_index_counts)
+            errors[~np.isfinite(errors)] = 0
+        hardest_samples = np.argsort(errors)[-5:]
+        plot_images(x_data[hardest_samples], y_data[hardest_samples],
+                    "polynomial" if kernel_function == polynomial_kernel else "gaussian")
     if not confusions:
         # Calculate mean and std of errors and parameters.
         test_errors_mean_std = (np.around(np.average(test_errors), 3), np.around(np.std(test_errors), 3))
@@ -144,8 +148,9 @@ def task_1_3(kernel_function, kernel_parameters, classifier="Perceptron", C=None
 
 if __name__ == '__main__':
     # Kernel parameters for polynomial and Gaussian kernel.
-    dimensions = [i for i in range(4, 5)]
+    dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
+    print(*task_1_2(polynomial_kernel, dimensions))
     # Task 1.1
     for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
@@ -159,7 +164,7 @@ if __name__ == '__main__':
     # Task 1.3
     mean_p_matrix, std_p_matrix = task_1_3(polynomial_kernel, dimensions, classifier="OvA-Perceptron")
     matrices_to_latex_table(mean_p_matrix, std_p_matrix)
-    plot_confusion_matrix(mean_p_matrix, std_p_matrix, 10, "plots/polynommial_confusion_matrix.pdf")
+    plot_confusion_matrix(mean_p_matrix, std_p_matrix, 10, "plots/polynomial_confusion_matrix.pdf")
     mean_g_matrix, std_g_matrix = task_1_3(gaussian_kernel, cs, classifier="OvA-Perceptron")
     matrices_to_latex_table(mean_g_matrix, std_g_matrix)
     plot_confusion_matrix(mean_g_matrix, std_g_matrix, 10, "plots/gaussian_confusion_matrix.pdf")
