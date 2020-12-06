@@ -13,6 +13,7 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
     x_data, y_data = read_data("data/zipcombo.dat")
     if classifier == "SVM":
         y_data = y_data.squeeze().astype(np.float64)
+    # Set up necessary variables.
     indices = np.arange(0, x_data.shape[0])
     train_errors = {i: [] for i, j in enumerate(kernel_parameters)}
     test_errors = {i: [] for i, j in enumerate(kernel_parameters)}
@@ -30,21 +31,19 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
             train_indices, test_indices = index_splits[epoch]
             train_kernel_matrix = kernel_matrix[train_indices, train_indices.reshape((-1, 1))]
             test_kernel_matrix = kernel_matrix[train_indices.reshape((-1, 1)), test_indices]
-            if classifier == "Perceptron":
-                alphas = train_kernel_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
-                train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
-                test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
-            elif classifier == "SVM":
+            if classifier == "SVM":
                 alphas, b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C, num_classes)
                 train_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[train_indices], train_kernel_matrix)
                 test_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[test_indices], test_kernel_matrix)
-            elif classifier == "OvA-Perceptron":
-                alphas = train_ova_kernel_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
+            else:
+                if classifier == "Perceptron":
+                    alphas = train_kernel_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
+                elif classifier == "OvA-Perceptron":
+                    alphas = train_ova_kernel_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
                 train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
                 test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
             train_errors[index].append(train_error)
             test_errors[index].append(test_error)
-
     # Analyse results.
     train_errors_mean_std = [(np.around(np.average(errors), 3), np.around(np.std(errors), 3)) for errors in
                              train_errors.values()]
@@ -57,16 +56,16 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
     x_data, y_data = read_data("data/zipcombo.dat")
     if classifier == "SVM":
         y_data = y_data.squeeze().astype(np.float64)
+    # Set up necessary variables.
     indices = np.arange(0, x_data.shape[0])
-    test_errors, parameters = [], []
-    confusion_matrices = []
+    test_errors, parameters, confusion_matrices, matrices = [], [], [], []
     num_classes = 10
     # Generate train/test splits by generating 20 index pairs.
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
     kfold_test_errors = np.zeros((len(kernel_parameters), 20), dtype=np.float64)
 
-    matrices = []
     for index, kernel_parameter in enumerate(kernel_parameters):
+        # Create kernel matrix on full data set and save it for later.
         kernel_matrix = kernelise_symmetric(x_data, kernel_function, kernel_parameter)
         matrices.append(kernel_matrix)
         for epoch in tqdm(range(20)):
@@ -74,6 +73,7 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
             kfold = KFold(train_indices, 5)
             kfold_test_error = 0.0
             for kfold_train_indices, kfold_test_indices in kfold:
+                # Get kernel matrices corresponding to the current kfold train/test split.
                 train_kernel_matrix = kernel_matrix[kfold_train_indices, kfold_train_indices.reshape((-1, 1))]
                 test_kernel_matrix = kernel_matrix[kfold_train_indices.reshape((-1, 1)), kfold_test_indices]
                 if classifier == "SVM":
@@ -134,17 +134,15 @@ if __name__ == '__main__':
     dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     # Task 1.1
-    print("OvA Perceptron")
-    errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier="OvA-Perceptron"), dimensions)
-    errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="OvA-Perceptron"), cs)
-    print("Perceptron")
-    errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions), dimensions)
-    errors_to_latex_table(*task_1_1(gaussian_kernel, cs), cs)
-    print("SVM")
-    errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=1.0), cs)
+    for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
+        print(classifier)
+        errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier, C=1.0), dimensions)
+        errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)
     # Task 1.2
-    print(*task_1_2(polynomial_kernel, dimensions))
-    print(*task_1_2(gaussian_kernel, cs))
+    for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
+        print(classifier)
+        print(*task_1_2(polynomial_kernel, dimensions, classifier=classifier, C=1.0))
+        print(*task_1_2(gaussian_kernel, cs, classifier=classifier, C=1.0))
     # Task 1.3
     mean_p_matrix, std_p_matrix = task_1_3(polynomial_kernel, dimensions)
     matrices_to_latex_table(mean_p_matrix, std_p_matrix)

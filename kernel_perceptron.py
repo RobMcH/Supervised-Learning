@@ -55,23 +55,28 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 
 @numba.jit()
 def train_kernel_perceptron(train_y, kernel_matrix, num_classes):
+    # Initialise weights to matrix of zeros, initialise other variables.
     alphas = np.zeros((num_classes, len(train_y)), dtype=np.float64)
-    best_alphas = np.zeros_like(alphas, dtype=np.float64)
-    error, last_error = 0, len(train_y) + 1
-    epoch = 1
+    best_alphas, error, last_error, epoch = None, 0, len(train_y) + 1, 1
     while True:
         error = 0
         for i in range(len(train_y)):
             if epoch == 1:
+                # In the first epoch the examples were only seen up to index i.
                 y_hat = np.argmax(np.dot(alphas[:, :i], kernel_matrix[:i, i])) + 1
             else:
+                # In all other epochs every example has already been seen at least once.
                 y_hat = np.argmax(np.dot(alphas, kernel_matrix[:, i])) + 1
+            # Define y as the correct class + 1 so that for examples from class 0 we don't just add/substract 0.
             y = train_y[i, 0] + 1
+            # Increase error counter and update weights.
             error += 1 if y_hat != y else 0
             alphas[y_hat - 1, i] -= y
             alphas[y - 1, i] += y
+        # Stop training when training error stops decreasing.
         if error >= last_error:
             break
+        # If error decreased, save the weights as the best weights and continue training.
         last_error = error
         best_alphas = np.copy(alphas)
         epoch += 1
@@ -99,23 +104,27 @@ def kernel_perceptron_predict_class(kernel_matrix, alphas):
 @numba.jit()
 def train_ova_kernel_perceptron(train_y, kernel_matrix, num_classes):
     alphas = np.zeros((num_classes, len(train_y)), dtype=np.float64)
-    best_alphas = None
-    error, last_error = 0, len(train_y) * num_classes + 1
-    epoch = 1
+    best_alphas, error, last_error, epoch = None, 0, len(train_y) * num_classes + 1, 1
     while True:
         error = 0
+        # Loop over classes.
         for classifier in range(1, num_classes + 1):
             for i in range(len(train_y)):
                 if epoch == 1:
+                    # In the first epoch the examples were only seen up to index i.
                     y_hat = -1 if np.dot(alphas[classifier - 1, :i], kernel_matrix[:i, i]) < 0 else 1
                 else:
+                    # In all other epochs every example has already been seen at least once.
                     y_hat = -1 if np.dot(alphas[classifier - 1, :], kernel_matrix[:, i]) < 0 else 1
                 y = -1 if train_y[i, 0] != classifier - 1 else 1
                 if y_hat != y:
+                    # Update weights and increase error counter if prediction was wrong.
                     alphas[classifier - 1, i] += y
                     error += 1
+        # Stop training when training error stops decreasing.
         if error >= last_error:
             break
+        # If error decreased, save the weights as the best weights and continue training.
         best_alphas = np.copy(alphas)
         last_error = error
         epoch += 1
