@@ -135,18 +135,18 @@ if __name__ == '__main__':
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     # Task 1.1
     for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
-        print(classifier)
+        print(f"-------- {classifier} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier, C=1.0), dimensions)
         errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)
     # Task 1.2
     for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
-        print(classifier)
+        print(f"-------- {classifier} --------")
         print(*task_1_2(polynomial_kernel, dimensions, classifier=classifier, C=1.0))
         print(*task_1_2(gaussian_kernel, cs, classifier=classifier, C=1.0))
     # Task 1.3
-    mean_p_matrix, std_p_matrix = task_1_3(polynomial_kernel, dimensions)
+    mean_p_matrix, std_p_matrix = task_1_3(polynomial_kernel, dimensions, classifier="OvA-Perceptron")
     matrices_to_latex_table(mean_p_matrix, std_p_matrix)
     plot_confusion_matrix(mean_p_matrix, std_p_matrix, 10, "plots/polynommial_confusion_matrix.pdf")
-    mean_g_matrix, std_g_matrix = task_1_3(gaussian_kernel, cs)
+    mean_g_matrix, std_g_matrix = task_1_3(gaussian_kernel, cs, classifier="OvA-Perceptron")
     matrices_to_latex_table(mean_g_matrix, std_g_matrix)
     plot_confusion_matrix(mean_g_matrix, std_g_matrix, 10, "plots/gaussian_confusion_matrix.pdf")
