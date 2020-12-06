@@ -147,7 +147,7 @@ if __name__ == '__main__':
     dimensions = [i for i in range(4, 5)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     # Task 1.1
-    """for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
+    for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier, C=1.0), dimensions)
         errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)
@@ -155,8 +155,7 @@ if __name__ == '__main__':
     for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
         print(*task_1_2(polynomial_kernel, dimensions, classifier=classifier, C=1.0))
-        print(*task_1_2(gaussian_kernel, cs, classifier=classifier, C=1.0))"""
-    print(*task_1_2(polynomial_kernel, dimensions, classifier="OvA-Perceptron"))
+        print(*task_1_2(gaussian_kernel, cs, classifier=classifier, C=1.0))
     # Task 1.3
     mean_p_matrix, std_p_matrix = task_1_3(polynomial_kernel, dimensions, classifier="OvA-Perceptron")
     matrices_to_latex_table(mean_p_matrix, std_p_matrix)
