@@ -94,7 +94,6 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
             kfold_test_error /= 5
             kfold_test_errors[index, epoch] = kfold_test_error
     best_param_indices = np.argmin(kfold_test_errors, axis=0)
-    train_indices, test_indices = None, None
     for epoch_index, param_index in enumerate(best_param_indices):
         # Retrain on full training data with the best parameter found during cross-validation.
         train_indices, test_indices = index_splits[epoch_index]
@@ -150,11 +149,10 @@ if __name__ == '__main__':
     dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     # Task 1.1
-    errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=1.0), cs)
-    """for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
+    for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier, C=1.0), dimensions)
-        errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)"""
+        errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)
     # Task 1.2
     for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
