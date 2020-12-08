@@ -1,6 +1,4 @@
 import numpy as np
-from kernel_perceptron import polynomial_kernel, gaussian_kernel, kernelise_symmetric
-from data import read_data, random_split_indices
 import numba
 
 np.random.seed(42)
@@ -19,12 +17,13 @@ def calculate_line_bounds(y_1, y_2, alpha_1, alpha_2, C):
 
 @numba.njit()
 def objective_function(alphas, kernel_matrix, ys):
-    return np.sum(alphas) - np.sum(np.outer(ys, ys) @ kernel_matrix @ np.outer(alphas, alphas))
+    return np.sum(alphas) - np.sum(
+        np.multiply(np.outer(ys, ys), np.multiply(kernel_matrix, np.outer(alphas, alphas)))) / 2
 
 
 @numba.njit()
 def predict(alphas, train_y, kernel_matrix, b):
-    return np.outer(alphas, train_y) @ kernel_matrix - b
+    return (alphas * train_y) @ kernel_matrix - b
 
 
 @numba.njit()
@@ -107,6 +106,7 @@ def examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b):
     return 0, b
 
 
+@numba.njit()
 def train_svm(kernel_matrix, train_y, C, max_iterations=100):
     # Initialise alphas, b, and errors.
     alphas, b = np.zeros(kernel_matrix.shape[0]), 0.0

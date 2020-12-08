@@ -13,6 +13,10 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
     x_data, y_data = read_data("data/zipcombo.dat")
     if classifier == "SVM":
         y_data = y_data.squeeze().astype(np.float64)
+    elif classifier == "OvA-Perceptron":
+        train_perceptron = train_ova_kernel_perceptron
+    elif classifier == "Perceptron":
+        train_perceptron = train_kernel_perceptron
     # Set up necessary variables.
     indices = np.arange(0, x_data.shape[0])
     train_errors = {i: [] for i, j in enumerate(kernel_parameters)}
@@ -36,10 +40,7 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
                 train_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[train_indices], train_kernel_matrix)
                 test_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[test_indices], test_kernel_matrix)
             else:
-                if classifier == "Perceptron":
-                    alphas = train_kernel_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
-                elif classifier == "OvA-Perceptron":
-                    alphas = train_ova_kernel_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
+                alphas = train_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
                 train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
                 test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
             train_errors[index].append(train_error)
@@ -56,6 +57,10 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
     x_data, y_data = read_data("data/zipcombo.dat")
     if classifier == "SVM":
         y_data = y_data.squeeze().astype(np.float64)
+    elif classifier == "OvA-Perceptron":
+        train_perceptron = train_ova_kernel_perceptron
+    elif classifier == "Perceptron":
+        train_perceptron = train_kernel_perceptron
     # Set up necessary variables.
     indices = np.arange(0, x_data.shape[0])
     test_errors, parameters, confusion_matrices, matrices, error_vectors = [], [], [], [], []
@@ -83,11 +88,7 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
                     kfold_test_error += evaluate_svm(alphas, b, y_data[train_indices], y_data[test_indices],
                                                      test_kernel_matrix)
                 else:
-                    if classifier == "Perceptron":
-                        alphas = train_kernel_perceptron(y_data[kfold_train_indices], train_kernel_matrix, num_classes)
-                    elif classifier == "OvA-Perceptron":
-                        alphas = train_ova_kernel_perceptron(y_data[kfold_train_indices], train_kernel_matrix,
-                                                             num_classes)
+                    alphas = train_perceptron(y_data[kfold_train_indices], train_kernel_matrix, num_classes)
                     kfold_test_error += kernel_perceptron_evaluate(y_data[kfold_test_indices], test_kernel_matrix,
                                                                    alphas)
             kfold_test_error /= 5
@@ -99,12 +100,10 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
         train_indices, test_indices = index_splits[epoch_index]
         train_kernel_matrix = matrices[param_index][train_indices, train_indices.reshape((-1, 1))]
         test_kernel_matrix = matrices[param_index][train_indices.reshape((-1, 1)), test_indices]
-        if classifier == "Perceptron":
-            best_alphas = train_kernel_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
-        elif classifier == "SVM":
-            best_alphas = train_ova_svm(train_kernel_matrix, y_data[train_indices], C, num_classes)
-        elif classifier == "OvA-Perceptron":
-            best_alphas = train_ova_kernel_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
+        if classifier == "SVM":
+            best_alphas, best_b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C, num_classes)
+        else:
+            best_alphas = train_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
             # Find hardest to predict data items for OvA-Perceptron.
             error_vectors.append(
                 kernel_perceptron_predict_class(test_kernel_matrix, best_alphas) != y_data[test_indices])
@@ -151,10 +150,11 @@ if __name__ == '__main__':
     dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     # Task 1.1
-    for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
+    errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=1.0), cs)
+    """for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier, C=1.0), dimensions)
-        errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)
+        errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)"""
     # Task 1.2
     for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
