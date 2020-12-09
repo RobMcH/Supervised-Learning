@@ -16,7 +16,7 @@ def calculate_line_bounds(y_1, y_2, alpha_1, alpha_2, C):
 
 
 @numba.njit()
-def objective_function(alphas, kernel_matrix, ys):
+def objective(alphas, kernel_matrix, ys):
     return np.sum(alphas) - np.sum(
         np.multiply(np.outer(ys, ys), np.multiply(kernel_matrix, np.outer(alphas, alphas)))) / 2
 
@@ -43,9 +43,9 @@ def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
     else:
         temp_alphas = np.copy(alphas)
         temp_alphas[i_2] = L
-        Lobj = objective_function(temp_alphas, kernel_matrix, train_y)
+        Lobj = objective(temp_alphas, kernel_matrix, train_y)
         temp_alphas[i_2] = H
-        Hobj = objective_function(temp_alphas, kernel_matrix, train_y)
+        Hobj = objective(temp_alphas, kernel_matrix, train_y)
         alpha_2_new = alpha_2
         if Lobj > Hobj + 1e-3:
             alpha_2_new = L
@@ -73,10 +73,11 @@ def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
     alphas[i_1] = alpha_1_new
     alphas[i_2] = alpha_2_new
     # Update errors
+    temp = np.multiply(y_1 * (alpha_1_new - alpha_1), kernel_matrix[i_1]) + np.multiply(y_2 * (alpha_2_new - alpha_2),
+                                                                                        kernel_matrix[i_2]) + b - b_new
     for i in range(len(errors)):
         if i != i_1 and i != i_2:
-            errors[i] += y_1 * (alpha_1_new - alpha_1) * kernel_matrix[i_1, i] + y_2 * (alpha_2_new - alpha_2) * \
-                         kernel_matrix[i_2, i] + b - b_new
+            errors[i] += temp[i]
     return 1, b
 
 
@@ -109,7 +110,7 @@ def examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b):
 @numba.njit()
 def train_svm(kernel_matrix, train_y, C, max_iterations=100):
     # Initialise alphas, b, and errors.
-    alphas, b = np.zeros(len(train_y)), 0.0
+    alphas, b = np.zeros(train_y.size), 0.0
     errors = np.zeros_like(alphas, dtype=np.float64) - train_y
     num_changed, examine_all = 0, True
     best_alphas, best_b, lowest_error, epoch = None, None, 100.0, 1
@@ -132,7 +133,7 @@ def train_svm(kernel_matrix, train_y, C, max_iterations=100):
         predictions = predict(alphas, train_y, kernel_matrix, b)
         predictions[predictions < 0] = -1
         predictions[predictions >= 0] = 1
-        error = (predictions != train_y).sum() / len(train_y) * 100
+        error = (predictions != train_y).sum() / train_y.size * 100
         epoch += 1
         # Save weights if the training error decreased.
         if error < lowest_error:
@@ -145,7 +146,8 @@ def train_svm(kernel_matrix, train_y, C, max_iterations=100):
     return best_alphas, best_b
 
 
-def train_ova_svm(kernel_matrix, train_y, C, num_classes):
+def train_ova_svm(kernel_matrix, train_y, C):
+    num_classes = np.unique(train_y).size
     alpha_w, b_w = np.zeros((num_classes, kernel_matrix.shape[0])), np.zeros(num_classes)
     # Train num_classes OvA SVMs.
     for i in range(num_classes):
@@ -172,4 +174,4 @@ def ova_predict(alpha_w, b_w, train_y, kernel_matrix):
 
 def evaluate_svm(alphas, b, train_y, test_y, kernel_matrix):
     predictions = ova_predict(alphas, b, train_y, kernel_matrix)
-    return (predictions != test_y).sum() / len(test_y) * 100
+    return (predictions != test_y).sum() / test_y.size * 100

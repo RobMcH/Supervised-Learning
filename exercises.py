@@ -27,7 +27,6 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
     x_data, y_data, indices, train_perceptron = setup(classifier)
     train_errors = {i: [] for i, j in enumerate(kernel_parameters)}
     test_errors = {i: [] for i, j in enumerate(kernel_parameters)}
-    num_classes = 10
     # Generate train/test splits by generating 20 index pairs.
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
 
@@ -42,11 +41,11 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
             train_kernel_matrix = kernel_matrix[train_indices, train_indices.reshape((-1, 1))]
             test_kernel_matrix = kernel_matrix[train_indices.reshape((-1, 1)), test_indices]
             if classifier == "SVM":
-                alphas, b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C, num_classes)
+                alphas, b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C)
                 train_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[train_indices], train_kernel_matrix)
                 test_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[test_indices], test_kernel_matrix)
             else:
-                alphas = train_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
+                alphas = train_perceptron(y_data[train_indices], train_kernel_matrix)
                 train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
                 test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
             train_errors[index].append(train_error)
@@ -62,11 +61,10 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
 def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="Perceptron", C=None):
     x_data, y_data, indices, train_perceptron = setup(classifier)
     test_errors, parameters, confusion_matrices, matrices, error_vectors = [], [], [], [], []
-    num_classes = 10
     # Generate train/test splits by generating 20 index pairs.
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
     test_index_counts = np.bincount(np.array([index_splits[i][1] for i in range(20)]).reshape(-1),
-                                    minlength=len(indices))
+                                    minlength=indices.size)
     kfold_test_errors = np.zeros((len(kernel_parameters), 20), dtype=np.float64)
 
     for index, kernel_parameter in enumerate(kernel_parameters):
@@ -82,11 +80,11 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
                 train_kernel_matrix = kernel_matrix[kfold_train_indices, kfold_train_indices.reshape((-1, 1))]
                 test_kernel_matrix = kernel_matrix[kfold_train_indices.reshape((-1, 1)), kfold_test_indices]
                 if classifier == "SVM":
-                    alphas, b = train_ova_svm(train_kernel_matrix, y_data[kfold_train_indices], C, num_classes)
+                    alphas, b = train_ova_svm(train_kernel_matrix, y_data[kfold_train_indices], C)
                     kfold_test_error += evaluate_svm(alphas, b, y_data[kfold_train_indices], y_data[kfold_test_indices],
                                                      test_kernel_matrix)
                 else:
-                    alphas = train_perceptron(y_data[kfold_train_indices], train_kernel_matrix, num_classes)
+                    alphas = train_perceptron(y_data[kfold_train_indices], train_kernel_matrix)
                     kfold_test_error += kernel_perceptron_evaluate(y_data[kfold_test_indices], test_kernel_matrix,
                                                                    alphas)
             kfold_test_error /= 5
@@ -98,9 +96,9 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
         train_kernel_matrix = matrices[param_index][train_indices, train_indices.reshape((-1, 1))]
         test_kernel_matrix = matrices[param_index][train_indices.reshape((-1, 1)), test_indices]
         if classifier == "SVM":
-            best_alphas, best_b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C, num_classes)
+            best_alphas, best_b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C)
         else:
-            best_alphas = train_perceptron(y_data[train_indices], train_kernel_matrix, num_classes)
+            best_alphas = train_perceptron(y_data[train_indices], train_kernel_matrix)
             # Find hardest to predict data items for OvA-Perceptron.
             error_vectors.append(
                 kernel_perceptron_predict_class(test_kernel_matrix, best_alphas) != y_data[test_indices])
@@ -117,11 +115,12 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
         else:
             # Calculate confusion matrix on the test data.
             predictions = kernel_perceptron_predict_class(test_kernel_matrix, best_alphas)
-            confusion_matrix = generate_absolute_confusion_matrix(predictions, y_data[test_indices], num_classes)
+            confusion_matrix = generate_absolute_confusion_matrix(predictions, y_data[test_indices],
+                                                                  np.unique(y_data).size)
             confusion_matrices.append(confusion_matrix)
     # Find the hardest test examples and plot them.
     if classifier == "OvA-Perceptron":
-        errors = np.zeros(len(indices))
+        errors = np.zeros(indices.size)
         for i in range(len(error_vectors)):
             errors[index_splits[i][1][error_vectors[i].squeeze()]] += 1
         with np.errstate(divide="ignore", invalid="ignore"):
@@ -147,6 +146,7 @@ if __name__ == '__main__':
     # Kernel parameters for polynomial and Gaussian kernel.
     dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
+    task_1_1(gaussian_kernel, cs, classifier="SVM", C=1.0)
     # Task 1.1
     for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")

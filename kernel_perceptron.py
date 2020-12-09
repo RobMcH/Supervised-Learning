@@ -54,15 +54,16 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 
 
 @numba.jit()
-def train_ova_kernel_perceptron(train_y, kernel_matrix, num_classes):
+def train_ova_kernel_perceptron(train_y, kernel_matrix):
     # Initialise weights to matrix of zeros, initialise other variables.
-    alphas = np.zeros((num_classes, len(train_y)), dtype=np.float64)
-    best_alphas, error, last_error, epoch = None, 0, len(train_y) * num_classes + 1, 1
+    num_classes = np.unique(train_y).size
+    alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
+    best_alphas, error, last_error, epoch = None, 0, train_y.size * num_classes + 1, 1
     while True:
         error = 0
         # Loop over classes.
         for classifier in range(1, num_classes + 1):
-            for i in range(len(train_y)):
+            for i in range(train_y.size):
                 if epoch == 1:
                     # In the first epoch the examples were only seen up to index i.
                     y_hat = -1 if np.dot(alphas[classifier - 1, :i], kernel_matrix[:i, i]) < 0 else 1
@@ -85,13 +86,14 @@ def train_ova_kernel_perceptron(train_y, kernel_matrix, num_classes):
 
 
 @numba.jit()
-def train_kernel_perceptron(train_y, kernel_matrix, num_classes):
+def train_kernel_perceptron(train_y, kernel_matrix):
     # Initialise weights to matrix of zeros, initialise other variables.
-    alphas = np.zeros((num_classes, len(train_y)), dtype=np.float64)
-    best_alphas, error, last_error, epoch = None, 0, len(train_y) + 1, 1
+    num_classes = np.unique(train_y).size
+    alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
+    best_alphas, error, last_error, epoch = None, 0, train_y.size + 1, 1
     while True:
         error = 0
-        for i in range(len(train_y)):
+        for i in range(train_y.size):
             if epoch == 1:
                 # In the first epoch the examples were only seen up to index i.
                 y_hat = np.argmax(np.dot(alphas[:, :i], kernel_matrix[:i, i]))

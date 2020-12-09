@@ -3,9 +3,10 @@ import numpy as np
 
 def train_adaboost_ensemble(x, y, num_classifiers, base_classifier):
     observation_weights = np.ones(len(x)) / len(x)
+    num_classes = np.unique(y).size
     classifiers, classifier_weights = [], []
     for i in range(0, num_classifiers):
-        base_classifier().fit(x, y, sample_weights=observation_weights)
+        base_classifier(num_leaves=num_classes, sample_weights=observation_weights).fit(x, y)
         classifiers.append(base_classifier)
         classifier_weights.append(np.copy(observation_weights))
         predictions = (base_classifier.predict(x) == y).astype(np.float64)
