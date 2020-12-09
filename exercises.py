@@ -10,6 +10,7 @@ from plotter import plot_confusion_matrix, plot_images
 
 
 def setup(classifier):
+    # Set up necessary variables for the tasks.
     x_data, y_data = read_data("data/zipcombo.dat")
     train_perceptron = None
     if classifier == "SVM":
@@ -18,7 +19,6 @@ def setup(classifier):
         train_perceptron = train_ova_kernel_perceptron
     elif classifier == "Perceptron":
         train_perceptron = train_kernel_perceptron
-    # Set up necessary variables.
     indices = np.arange(0, x_data.shape[0])
     return x_data, y_data, indices, train_perceptron
 

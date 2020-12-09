@@ -23,7 +23,7 @@ def objective_function(alphas, kernel_matrix, ys):
 
 @numba.njit()
 def predict(alphas, train_y, kernel_matrix, b):
-    return (alphas * train_y) @ kernel_matrix - b
+    return np.multiply(alphas, train_y) @ kernel_matrix - b
 
 
 @numba.njit()
@@ -120,7 +120,7 @@ def train_svm(kernel_matrix, train_y, C, max_iterations=100):
                 nc, b = examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b)
                 num_changed += nc
         else:
-            indices = np.arange(0, len(alphas))[np.where((alphas != 0) & (alphas != C), True, False)]
+            indices = np.arange(0, len(alphas))[np.where(np.logical_and(alphas != 0, alphas != C), True, False)]
             for i_2 in indices:
                 nc, b = examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b)
                 num_changed += nc
@@ -132,7 +132,7 @@ def train_svm(kernel_matrix, train_y, C, max_iterations=100):
         predictions = predict(alphas, train_y, kernel_matrix, b)
         predictions[predictions < 0] = -1
         predictions[predictions >= 0] = 1
-        error = 100.0 - (np.sum(predictions == train_y) / len(train_y) * 100)
+        error = (predictions != train_y).sum() / len(train_y) * 100
         epoch += 1
         # Save weights if the training error decreased.
         if error < lowest_error:
@@ -146,30 +146,30 @@ def train_svm(kernel_matrix, train_y, C, max_iterations=100):
 
 
 def train_ova_svm(kernel_matrix, train_y, C, num_classes):
-    alpha_w, b_w = [], []
+    alpha_w, b_w = np.zeros((num_classes, kernel_matrix.shape[0])), np.zeros(num_classes)
     # Train num_classes OvA SVMs.
     for i in range(num_classes):
         temp_y = np.copy(train_y)
         temp_y[train_y != i] = -1.0
         temp_y[train_y == i] = 1.0
         alpha, b = train_svm(kernel_matrix, temp_y, C)
-        alpha_w.append(alpha)
-        b_w.append(b)
+        alpha_w[i] = alpha
+        b_w[i] = b
     return alpha_w, b_w
 
 
 def ova_predict(alpha_w, b_w, train_y, kernel_matrix):
-    predictions = []
+    predictions = np.zeros((alpha_w.shape[0], kernel_matrix.shape[1]))
     # Loop over OvA classifiers and collect the predictions of each of them.
-    for i in range(len(alpha_w)):
+    for i in range(alpha_w.shape[0]):
         temp_y = np.copy(train_y)
         temp_y[train_y != i] = -1.0
         temp_y[train_y == i] = 1.0
-        predictions.append(predict(alpha_w[i], temp_y, kernel_matrix, b_w[i]))
+        predictions[i] = predict(alpha_w[i], temp_y, kernel_matrix, b_w[i])
     # Stack the predictions and get the argmax of each column (i.e., of every data point).
-    return np.argmax(np.array(predictions), axis=0)
+    return np.argmax(predictions, axis=0)
 
 
 def evaluate_svm(alphas, b, train_y, test_y, kernel_matrix):
     predictions = ova_predict(alphas, b, train_y, kernel_matrix)
-    return 100.0 - np.sum(predictions == test_y) / len(test_y) * 100
+    return (predictions != test_y).sum() / len(test_y) * 100

@@ -8,7 +8,7 @@ def read_data(fn):
     # Read the data, and split it into x and y vectors.
     data = np.loadtxt(fn)
     y, x = np.hsplit(data, [1])
-    x = x.astype(np.float64)
+    x = (x.astype(np.float64) + 1.0) / 2.0
     y = y.astype(np.int64)
     return x, y
 
