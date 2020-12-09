@@ -109,7 +109,7 @@ def examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b):
 @numba.njit()
 def train_svm(kernel_matrix, train_y, C, max_iterations=100):
     # Initialise alphas, b, and errors.
-    alphas, b = np.zeros(kernel_matrix.shape[0]), 0.0
+    alphas, b = np.zeros(len(train_y)), 0.0
     errors = np.zeros_like(alphas, dtype=np.float64) - train_y
     num_changed, examine_all = 0, True
     best_alphas, best_b, lowest_error, epoch = None, None, 100.0, 1

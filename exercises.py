@@ -9,8 +9,9 @@ from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_mat
 from plotter import plot_confusion_matrix, plot_images
 
 
-def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None):
+def setup(classifier):
     x_data, y_data = read_data("data/zipcombo.dat")
+    train_perceptron = None
     if classifier == "SVM":
         y_data = y_data.squeeze().astype(np.float64)
     elif classifier == "OvA-Perceptron":
@@ -19,6 +20,11 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
         train_perceptron = train_kernel_perceptron
     # Set up necessary variables.
     indices = np.arange(0, x_data.shape[0])
+    return x_data, y_data, indices, train_perceptron
+
+
+def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None):
+    x_data, y_data, indices, train_perceptron = setup(classifier)
     train_errors = {i: [] for i, j in enumerate(kernel_parameters)}
     test_errors = {i: [] for i, j in enumerate(kernel_parameters)}
     num_classes = 10
@@ -54,15 +60,7 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
 
 
 def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="Perceptron", C=None):
-    x_data, y_data = read_data("data/zipcombo.dat")
-    if classifier == "SVM":
-        y_data = y_data.squeeze().astype(np.float64)
-    elif classifier == "OvA-Perceptron":
-        train_perceptron = train_ova_kernel_perceptron
-    elif classifier == "Perceptron":
-        train_perceptron = train_kernel_perceptron
-    # Set up necessary variables.
-    indices = np.arange(0, x_data.shape[0])
+    x_data, y_data, indices, train_perceptron = setup(classifier)
     test_errors, parameters, confusion_matrices, matrices, error_vectors = [], [], [], [], []
     num_classes = 10
     # Generate train/test splits by generating 20 index pairs.
@@ -84,8 +82,8 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
                 train_kernel_matrix = kernel_matrix[kfold_train_indices, kfold_train_indices.reshape((-1, 1))]
                 test_kernel_matrix = kernel_matrix[kfold_train_indices.reshape((-1, 1)), kfold_test_indices]
                 if classifier == "SVM":
-                    alphas, b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C, num_classes)
-                    kfold_test_error += evaluate_svm(alphas, b, y_data[train_indices], y_data[test_indices],
+                    alphas, b = train_ova_svm(train_kernel_matrix, y_data[kfold_train_indices], C, num_classes)
+                    kfold_test_error += evaluate_svm(alphas, b, y_data[kfold_train_indices], y_data[kfold_test_indices],
                                                      test_kernel_matrix)
                 else:
                     alphas = train_perceptron(y_data[kfold_train_indices], train_kernel_matrix, num_classes)
@@ -112,7 +110,8 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
             if classifier == "Perceptron" or classifier == "OvA-Perceptron":
                 test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, best_alphas)
             elif classifier == "SVM":
-                test_error = evaluate_svm(*best_alphas, y_data[train_indices], y_data[test_indices], test_kernel_matrix)
+                test_error = evaluate_svm(best_alphas, best_b, y_data[train_indices], y_data[test_indices],
+                                          test_kernel_matrix)
             parameters.append(kernel_parameters[param_index])
             test_errors.append(test_error)
         else:
