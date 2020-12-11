@@ -4,8 +4,7 @@ from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, trai
     kernel_perceptron_evaluate, kernel_perceptron_predict_class, polynomial_kernel, gaussian_kernel
 from support_vector_machine import train_ova_svm, evaluate_svm
 from data import read_data, random_split_indices
-from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, errors_to_latex_table, \
-    matrices_to_latex_table
+from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, errors_to_latex_table
 from plotter import plot_confusion_matrix, plot_images
 
 
@@ -58,8 +57,10 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
     return train_errors_mean_std, test_errors_mean_std
 
 
-def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="Perceptron", C=None):
+def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=None):
     x_data, y_data, indices, train_perceptron = setup(classifier)
+    num_classes = np.unique(y_data).size
+    kernel_string = "polynomial" if kernel_function == polynomial_kernel else "gaussian"
     test_errors, parameters, confusion_matrices, matrices, error_vectors = [], [], [], [], []
     # Generate train/test splits by generating 20 index pairs.
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
@@ -103,21 +104,18 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
             error_vectors.append(
                 kernel_perceptron_predict_class(test_kernel_matrix, best_alphas) != y_data[test_indices])
 
-        if not confusions:
-            # Calculate test error, and save it and the corresponding parameter value.
-            if classifier == "Perceptron" or classifier == "OvA-Perceptron":
-                test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, best_alphas)
-            elif classifier == "SVM":
-                test_error = evaluate_svm(best_alphas, best_b, y_data[train_indices], y_data[test_indices],
-                                          test_kernel_matrix)
-            parameters.append(kernel_parameters[param_index])
-            test_errors.append(test_error)
+        # Calculate test error, and save it and the corresponding parameter value.
+        if classifier == "SVM":
+            test_error = evaluate_svm(best_alphas, best_b, y_data[train_indices], y_data[test_indices],
+                                      test_kernel_matrix)
         else:
-            # Calculate confusion matrix on the test data.
-            predictions = kernel_perceptron_predict_class(test_kernel_matrix, best_alphas)
-            confusion_matrix = generate_absolute_confusion_matrix(predictions, y_data[test_indices],
-                                                                  np.unique(y_data).size)
-            confusion_matrices.append(confusion_matrix)
+            test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, best_alphas)
+        parameters.append(kernel_parameters[param_index])
+        test_errors.append(test_error)
+        # Calculate confusion matrix on the test data.
+        predictions = kernel_perceptron_predict_class(test_kernel_matrix, best_alphas)
+        confusion_matrix = generate_absolute_confusion_matrix(predictions, y_data[test_indices], num_classes)
+        confusion_matrices.append(confusion_matrix)
     # Find the hardest test examples and plot them.
     if classifier == "OvA-Perceptron":
         errors = np.zeros(indices.size)
@@ -127,19 +125,15 @@ def task_1_2(kernel_function, kernel_parameters, confusions=False, classifier="P
             errors = np.true_divide(errors, test_index_counts)
             errors[~np.isfinite(errors)] = 0
         hardest_samples = np.argsort(errors)[-5:]
-        plot_images(x_data[hardest_samples], y_data[hardest_samples],
-                    "polynomial" if kernel_function == polynomial_kernel else "gaussian")
-    if not confusions:
-        # Calculate mean and std of errors and parameters.
-        test_errors_mean_std = (np.around(np.average(test_errors), 3), np.around(np.std(test_errors), 3))
-        parameter_mean_std = (np.average(parameters), np.std(parameters))
-        return test_errors_mean_std, parameter_mean_std
-    else:
-        return merge_confusion_matrices(confusion_matrices)
-
-
-def task_1_3(kernel_function, kernel_parameters, classifier="Perceptron", C=None):
-    return task_1_2(kernel_function, kernel_parameters, confusions=True, classifier=classifier, C=C)
+        plot_images(x_data[hardest_samples], y_data[hardest_samples], kernel_string)
+    # Merge and plot confusion matrix.
+    mean_matrix, std_matrix = merge_confusion_matrices(confusion_matrices)
+    plot_confusion_matrix(mean_matrix, std_matrix, num_classes,
+                          f"plots/{classifier}_{kernel_string}_{kernel_parameter}.pdf")
+    # Calculate mean and std of errors and parameters.
+    test_errors_mean_std = (np.around(np.average(test_errors), 3), np.around(np.std(test_errors), 3))
+    parameter_mean_std = (np.average(parameters), np.std(parameters))
+    return test_errors_mean_std, parameter_mean_std
 
 
 if __name__ == '__main__':
@@ -152,15 +146,8 @@ if __name__ == '__main__':
         print(f"-------- {classifier} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier, C=1.0), dimensions)
         errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)
-    # Task 1.2
+    # Task 1.2 and 1.3
     for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
         print(*task_1_2(polynomial_kernel, dimensions, classifier=classifier, C=1.0))
         print(*task_1_2(gaussian_kernel, cs, classifier=classifier, C=1.0))
-    # Task 1.3
-    mean_p_matrix, std_p_matrix = task_1_3(polynomial_kernel, dimensions, classifier="OvA-Perceptron")
-    matrices_to_latex_table(mean_p_matrix, std_p_matrix)
-    plot_confusion_matrix(mean_p_matrix, std_p_matrix, 10, "plots/polynomial_confusion_matrix.pdf")
-    mean_g_matrix, std_g_matrix = task_1_3(gaussian_kernel, cs, classifier="OvA-Perceptron")
-    matrices_to_latex_table(mean_g_matrix, std_g_matrix)
-    plot_confusion_matrix(mean_g_matrix, std_g_matrix, 10, "plots/gaussian_confusion_matrix.pdf")

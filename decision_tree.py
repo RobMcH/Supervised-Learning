@@ -4,17 +4,26 @@ from data import read_data
 
 
 @numba.njit()
-def gini_impurity(ys):
-    probabilities = np.bincount(ys.reshape(-1)) / ys.size
-    return 1.0 - np.sum(np.square(probabilities))
+def gini_impurity(xs, ys, feature):
+    num_values = xs[:, feature].size
+    values = np.unique(xs[:, feature])
+    num_classes = np.unique(ys).size
+    value_likelihoods = np.zeros(values.size)
+    probability_vector = np.zeros(values.size)
+    for i, value in enumerate(values):
+        mask = xs[:, feature] == value
+        value_likelihoods[i] = np.sum(mask) / num_values
+        probability_vector[i] = 1.0 - np.sum(
+            np.square(np.bincount(ys[mask].reshape(-1), minlength=num_classes) / np.sum(mask)))
+    return np.sum(probability_vector * value_likelihoods)
 
 
 @numba.njit()
 def find_best_split(xs, ys):
     num_examples, num_features = xs.shape
     best_feature, best_split_value, best_impurity_loss = None, None, 0.0
-    current_impurity = gini_impurity(ys)
     for feature in range(num_features):
+        current_impurity = gini_impurity(xs, ys)
         feature_values = np.unique(xs[:, feature])
         for split_value in feature_values:
             partition_l, partition_eh = xs[:, feature] < split_value, xs[:, feature] >= split_value
