@@ -3,14 +3,16 @@ from sample_complexity.perceptron import perceptron_fit, perceptron_evaluate
 from sample_complexity.least_squares import fit_linear_regression, evaluate_linear_regression, \
     fit_linear_regression_underdetermined
 from sample_complexity.winnow import winnow_fit, winnow_evaluate
+from sample_complexity.nearest_neighbours import nearest_neighbours_evaluate
 from sample_complexity.data import generate_data
 from sample_complexity.plotter import plot_sample_complexity
 
 if __name__ == '__main__':
-    n_max, m_max, num_runs = 101, 150, 20
+    n_max, m_max, num_runs = 101, 250, 20
     perceptron_errors = np.zeros((n_max - 1, m_max - 1))
     lr_errors = np.zeros_like(perceptron_errors)
     winnow_errors = np.zeros_like(perceptron_errors)
+    nn_errors = np.zeros_like(perceptron_errors)
 
     for i in range(num_runs):
         for n in range(1, n_max):
@@ -36,6 +38,9 @@ if __name__ == '__main__':
                 # Evaluate winnow.
                 w = winnow_fit(winnow_x, winnow_y)
                 winnow_errors[n - 1, m - 1] += winnow_evaluate(w, winnow_dev_x, winnow_dev_y)
+                # Evaluate 1-nn.
+                nn_errors[n - 1, m - 1] += nearest_neighbours_evaluate(train_x, train_y, dev_x, dev_y)
+
     # Plot perceptron sample complexity.
     perceptron_errors = perceptron_errors / num_runs <= 10.0
     min_samples = np.argmax(perceptron_errors, axis=1)
@@ -48,3 +53,7 @@ if __name__ == '__main__':
     winnow_errors = winnow_errors / num_runs <= 10.0
     min_samples = np.argmax(winnow_errors, axis=1)
     plot_sample_complexity([i for i in range(1, n_max)], min_samples, "winnow")
+    # Plot 1-nn sample complexity.
+    nn_errors = nn_errors / num_runs <= 10.0
+    min_samples = np.argmax(nn_errors, axis=1)
+    plot_sample_complexity([i for i in range(1, n_max)], min_samples, "1-nearest neighbours")

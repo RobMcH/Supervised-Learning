@@ -5,7 +5,6 @@ import numba
 @numba.njit()
 def perceptron_fit(xs, ys):
     w = np.zeros(xs.shape[1])
-    prev_dev_acc, epoch, last_error = 0.0, 0, ys.size
     for i in range(ys.size):
         x = xs[i]
         y = ys[i]
