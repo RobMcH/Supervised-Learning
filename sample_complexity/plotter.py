@@ -11,4 +11,4 @@ def plot_sample_complexity(n, m, classifier):
     plt.ylabel("Training data points (m)")
     plt.xlim(1, n[-1] + 1)
     plt.ylim(1, np.max(m) + 1)
-    plt.savefig(f"plots/{classifier}.pdf")
+    plt.savefig(f"plots/{'_'.join(classifier.split(' '))}.pdf")
