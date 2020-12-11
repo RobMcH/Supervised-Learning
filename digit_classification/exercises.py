@@ -1,16 +1,18 @@
 import numpy as np
 from tqdm import tqdm
-from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, train_ova_kernel_perceptron, \
-    kernel_perceptron_evaluate, kernel_perceptron_predict_class, polynomial_kernel, gaussian_kernel
-from support_vector_machine import train_ova_svm, evaluate_svm
-from data import read_data, random_split_indices
-from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, errors_to_latex_table
-from plotter import plot_confusion_matrix, plot_images
+from digit_classification.kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, \
+    train_ova_kernel_perceptron, kernel_perceptron_evaluate, kernel_perceptron_predict_class, polynomial_kernel, \
+    gaussian_kernel
+from digit_classification.support_vector_machine import train_ova_svm, evaluate_svm
+from digit_classification.data import read_data, random_split_indices
+from digit_classification.utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, \
+    errors_to_latex_table
+from digit_classification.plotter import plot_confusion_matrix, plot_images
 
 
 def setup(classifier):
     # Set up necessary variables for the tasks.
-    x_data, y_data = read_data("data/zipcombo.dat")
+    x_data, y_data = read_data("digit_classification/data/zipcombo.dat")
     train_perceptron = None
     if classifier == "SVM":
         y_data = y_data.squeeze().astype(np.float64)
@@ -128,7 +130,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=None
         plot_images(x_data[hardest_samples], y_data[hardest_samples], kernel_string)
     # Merge and plot confusion matrix.
     mean_matrix, std_matrix = merge_confusion_matrices(confusion_matrices)
-    plot_confusion_matrix(mean_matrix, std_matrix, num_classes, f"plots/{classifier}_{kernel_string}.pdf")
+    plot_confusion_matrix(mean_matrix, std_matrix, num_classes, f"{classifier}_{kernel_string}.pdf")
     # Calculate mean and std of errors and parameters.
     test_errors_mean_std = (np.around(np.average(test_errors), 3), np.around(np.std(test_errors), 3))
     parameter_mean_std = (np.average(parameters), np.std(parameters))

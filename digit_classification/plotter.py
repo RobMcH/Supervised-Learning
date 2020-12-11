@@ -18,7 +18,7 @@ def plot_confusion_matrix(mean_matrix, std_matrix, num_classes, fn):
     plt.yticks(rotation=0)
     plt.xlabel("Predicted class", fontsize=18)
     plt.ylabel("True class", fontsize=18)
-    plt.savefig(fn)
+    plt.savefig(f"plots/{fn}")
 
 
 def plot_images(images, labels, kernel_name):

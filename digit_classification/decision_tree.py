@@ -1,6 +1,6 @@
 import numpy as np
 import numba
-from data import read_data
+from digit_classification.data import read_data
 
 
 @numba.njit()
