@@ -14,4 +14,4 @@ def fit_linear_regression_underdetermined(x, y):
 
 @numba.njit()
 def evaluate_linear_regression(parameters, x, y):
-    return (x @ parameters != y).sum() / y.size * 100
+    return (x @ parameters != y).sum() / y.size * 100.0
