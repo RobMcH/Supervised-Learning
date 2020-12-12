@@ -1,5 +1,7 @@
 import numpy as np
 import numba
+import warnings
+warnings.filterwarnings("ignore", category=numba.NumbaPerformanceWarning)
 
 
 @numba.njit(parallel=True)
