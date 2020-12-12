@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 from sample_complexity.perceptron import perceptron_fit, perceptron_evaluate
 from sample_complexity.least_squares import fit_linear_regression, evaluate_linear_regression, \
     fit_linear_regression_underdetermined
@@ -14,7 +15,7 @@ if __name__ == '__main__':
     winnow_errors = np.zeros_like(perceptron_errors)
     nn_errors = np.zeros_like(perceptron_errors)
 
-    for i in range(num_runs):
+    for i in tqdm(range(num_runs)):
         for n in range(1, n_max):
             dev_x, dev_y = generate_data(1000, n)
             winnow_dev_x, winnow_dev_y = np.copy(dev_x), np.copy(dev_y)
@@ -40,7 +41,7 @@ if __name__ == '__main__':
                 winnow_errors[n - 1, m - 1] += winnow_evaluate(w, winnow_dev_x, winnow_dev_y)
                 # Evaluate 1-nn. Only compute 1-nn for the current value of n if any value of m resulted in <= 10.0
                 # generalisation error for the previous n.
-                if ((nn_errors[n - 2] / num_runs) <= 10.0).any():
+                if n < 2 or ((nn_errors[n - 2] / num_runs) <= 10.0).any():
                     nn_errors[n - 1, m - 1] += nearest_neighbours_evaluate(train_x, train_y, dev_x, dev_y)
     x_vals = np.arange(1, n_max)
     # Plot perceptron sample complexity.
