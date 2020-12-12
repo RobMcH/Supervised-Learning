@@ -8,7 +8,7 @@ from sample_complexity.data import generate_data
 from sample_complexity.plotter import plot_sample_complexity
 
 if __name__ == '__main__':
-    n_max, m_max, num_runs = 101, 250, 20
+    n_max, m_max, num_runs = 101, 300, 20
     perceptron_errors = np.zeros((n_max - 1, m_max - 1))
     lr_errors = np.zeros_like(perceptron_errors)
     winnow_errors = np.zeros_like(perceptron_errors)
@@ -38,22 +38,24 @@ if __name__ == '__main__':
                 # Evaluate winnow.
                 w = winnow_fit(winnow_x, winnow_y)
                 winnow_errors[n - 1, m - 1] += winnow_evaluate(w, winnow_dev_x, winnow_dev_y)
-                # Evaluate 1-nn.
-                nn_errors[n - 1, m - 1] += nearest_neighbours_evaluate(train_x, train_y, dev_x, dev_y)
-
+                # Evaluate 1-nn. Only compute 1-nn for the current value of n if any value of m resulted in <= 10.0
+                # generalisation error for the previous n.
+                if ((nn_errors[n - 2] / num_runs) <= 10.0).any():
+                    nn_errors[n - 1, m - 1] += nearest_neighbours_evaluate(train_x, train_y, dev_x, dev_y)
+    x_vals = np.arange(1, n_max)
     # Plot perceptron sample complexity.
     perceptron_errors = perceptron_errors / num_runs <= 10.0
     min_samples = np.argmax(perceptron_errors, axis=1)
-    plot_sample_complexity([i for i in range(1, n_max)], min_samples, "perceptron")
+    plot_sample_complexity(x_vals, min_samples, "perceptron", lin=True)
     # Plot least squares sample complexity.
     lr_errors = lr_errors / num_runs <= 10.0
     min_samples = np.argmax(lr_errors, axis=1)
-    plot_sample_complexity([i for i in range(1, n_max)], min_samples, "least squares")
+    plot_sample_complexity(x_vals, min_samples, "least squares", lin=True)
     # Plot winnow sample complexity.
     winnow_errors = winnow_errors / num_runs <= 10.0
     min_samples = np.argmax(winnow_errors, axis=1)
-    plot_sample_complexity([i for i in range(1, n_max)], min_samples, "winnow")
+    plot_sample_complexity(x_vals, min_samples, "winnow", log=True, lin=True)
     # Plot 1-nn sample complexity.
     nn_errors = nn_errors / num_runs <= 10.0
     min_samples = np.argmax(nn_errors, axis=1)
-    plot_sample_complexity([i for i in range(1, n_max)], min_samples, "1-nearest neighbours")
+    plot_sample_complexity(x_vals, min_samples, "1-nearest neighbour", quad=True, exp=True)

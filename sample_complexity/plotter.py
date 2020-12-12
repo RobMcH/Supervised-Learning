@@ -1,11 +1,21 @@
 import matplotlib.pyplot as plt
 import numpy as np
-plt.style.use('science')
+from sample_complexity.utils import logarithmic, linear, quadratic, exponential
+plt.style.use(['science','no-latex'])
 
 
-def plot_sample_complexity(n, m, classifier):
+def plot_sample_complexity(n, m, classifier, log=False, lin=False, quad=False, exp=False):
     fig = plt.figure()
-    plt.plot(n, m)
+    plt.plot(n[m != 0], m[m != 0], label=classifier)
+    if log:
+        plt.plot(n, logarithmic(n), label="log n")
+    if lin:
+        plt.plot(n, linear(n), label="n")
+    if quad:
+        plt.plot(n, quadratic(n), label="n^2")
+    if exp:
+        plt.plot(n, exponential(n), label="e^n")
+    plt.legend()
     plt.title(f"Sample complexity for {classifier}")
     plt.xlabel("Dimensionality (n)")
     plt.ylabel("Training data points (m)")
