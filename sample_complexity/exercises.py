@@ -14,6 +14,8 @@ if __name__ == '__main__':
     lr_errors = np.zeros_like(perceptron_errors)
     winnow_errors = np.zeros_like(perceptron_errors)
     nn_errors = np.zeros_like(perceptron_errors)
+    # Matrix to indicate where NN makes 0 errors (as opposed to just skipping a particular (m, n) pair).
+    nn_changes = np.zeros_like(perceptron_errors, dtype=np.bool)
 
     for i in tqdm(range(num_runs)):
         for n in range(1, n_max):
@@ -21,6 +23,7 @@ if __name__ == '__main__':
             winnow_dev_x, winnow_dev_y = np.copy(dev_x), np.copy(dev_y)
             winnow_dev_x[winnow_dev_x == -1] = 0
             winnow_dev_y[winnow_dev_y == -1] = 0
+            nn_count = 0
             for m in range(1, m_max):
                 # Set up data. Set -1s to 0s for winnow_x and winnow_y.
                 train_x, train_y = generate_data(m, n)
@@ -41,8 +44,14 @@ if __name__ == '__main__':
                 winnow_errors[n - 1, m - 1] += winnow_evaluate(w, winnow_dev_x, winnow_dev_y)
                 # Evaluate 1-nn. Only compute 1-nn for the current value of n if any value of m resulted in <= 10.0
                 # generalisation error for the previous n.
-                if n < 2 or ((nn_errors[n - 2] / num_runs) <= 10.0).any():
-                    nn_errors[n - 1, m - 1] += nearest_neighbours_evaluate(train_x, train_y, dev_x, dev_y)
+                if nn_count < 3 and (n < 2 or (nn_changes[n - 2].any() and (nn_errors[n - 2] / num_runs) <= 10.0).any()):
+                    nn_error = nearest_neighbours_evaluate(train_x, train_y, dev_x, dev_y)
+                    nn_errors[n - 1, m - 1] += nn_error
+                    nn_changes[n - 1, m - 1] = True
+                    if nn_error <= 10.0:
+                        nn_count += 1
+                    else:
+                        nn_count = 0
     x_vals = np.arange(1, n_max)
     # Plot perceptron sample complexity.
     perceptron_errors = perceptron_errors / num_runs <= 10.0
@@ -57,6 +66,6 @@ if __name__ == '__main__':
     min_samples = np.argmax(winnow_errors, axis=1)
     plot_sample_complexity(x_vals, min_samples, "winnow", log=True, lin=True)
     # Plot 1-nn sample complexity.
-    nn_errors = nn_errors / num_runs <= 10.0
+    nn_errors = np.logical_and(nn_errors / num_runs <= 10.0, nn_changes)
     min_samples = np.argmax(nn_errors, axis=1)
-    plot_sample_complexity(x_vals, min_samples, "1-nearest neighbour", quad=True, exp=True)
+    plot_sample_complexity(x_vals, min_samples, "1-nearest neighbour", quad=True, cube=True, exp=True)

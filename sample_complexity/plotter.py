@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from sample_complexity.utils import logarithmic, linear, quadratic, exponential
+from sample_complexity.utils import logarithmic, linear, quadratic, cubic, exponential
 plt.style.use(['science','no-latex'])
 
 
-def plot_sample_complexity(n, m, classifier, log=False, lin=False, quad=False, exp=False):
+def plot_sample_complexity(n, m, classifier, log=False, lin=False, quad=False, cube=False, exp=False):
     fig = plt.figure()
     plt.plot(n[m != 0], m[m != 0], label=classifier)
     if log:
@@ -13,6 +13,8 @@ def plot_sample_complexity(n, m, classifier, log=False, lin=False, quad=False, e
         plt.plot(n, linear(n), label="n")
     if quad:
         plt.plot(n, quadratic(n), label="n^2")
+    if cube:
+        plt.plot(n, cubic(n), label="n^3")
     if exp:
         plt.plot(n, exponential(n), label="e^n")
     plt.legend()
