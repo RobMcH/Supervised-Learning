@@ -6,7 +6,7 @@ plt.style.use(['science','no-latex'])
 
 def plot_sample_complexity(n, m, classifier, log=False, lin=False, quad=False, cube=False, exp=False):
     fig = plt.figure()
-    plt.plot(n[m != 0], m[m != 0], label=classifier)
+    plt.plot(n[m != -1], m[m != -1], label=classifier)
     if log:
         plt.plot(n, logarithmic(n), label="log n")
     if lin:
