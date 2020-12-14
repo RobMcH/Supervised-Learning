@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     for i in tqdm(range(1, num_runs + 1)):
         for n in tqdm(range(1, n_max + 1)):
-            dev_x, dev_y = generate_data(1000, n)
+            dev_x, dev_y = generate_data(2000, n)
             winnow_dev_x, winnow_dev_y = np.copy(dev_x), np.copy(dev_y)
             winnow_dev_x[winnow_dev_x == -1] = 0
             winnow_dev_y[winnow_dev_y == -1] = 0
@@ -59,25 +59,25 @@ if __name__ == '__main__':
     mask = np.any(perceptron_errors, axis=1)
     min_samples[mask] += 1
     min_samples[~mask] = -1
-    plot_sample_complexity(x_vals, min_samples, "perceptron", lin=True)
+    plot_sample_complexity(x_vals, min_samples, "perceptron", lin=1.8)
     # Plot least squares sample complexity.
     lr_errors = lr_errors / num_runs <= 10.0
     min_samples = np.argmax(lr_errors, axis=1)
     mask = np.any(lr_errors, axis=1)
     min_samples[mask] += 1
     min_samples[~mask] = -1
-    plot_sample_complexity(x_vals, min_samples, "least squares", lin=True)
+    plot_sample_complexity(x_vals, min_samples, "least squares", lin=1)
     # Plot winnow sample complexity.
     winnow_errors = winnow_errors / num_runs <= 10.0
     min_samples = np.argmax(winnow_errors, axis=1)
     mask = np.any(perceptron_errors, axis=1)
     min_samples[mask] += 1
     min_samples[~mask] = -1
-    plot_sample_complexity(x_vals, min_samples, "winnow", log=True, lin=True)
+    plot_sample_complexity(x_vals, min_samples, "winnow", log=7.6)
     # Plot 1-nn sample complexity.
     nn_errors = np.logical_and(nn_errors / num_runs <= 10.0, nn_changes)
     min_samples = np.argmax(nn_errors, axis=1)
     mask = np.any(nn_errors, axis=1)
     min_samples[mask] += 1
     min_samples[~mask] = -1
-    plot_sample_complexity(x_vals, min_samples, "1-nearest neighbour", quad=True, cube=True)
+    plot_sample_complexity(x_vals, min_samples, "1-nearest neighbour", cube=1)

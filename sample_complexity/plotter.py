@@ -4,19 +4,19 @@ from sample_complexity.utils import logarithmic, linear, quadratic, cubic, expon
 plt.style.use(['science','no-latex'])
 
 
-def plot_sample_complexity(n, m, classifier, log=False, lin=False, quad=False, cube=False, exp=False):
+def plot_sample_complexity(n, m, classifier, log=0, lin=0, quad=0, cube=0, exp=0):
     fig = plt.figure()
     plt.plot(n[m != -1], m[m != -1], label=classifier)
     if log:
-        plt.plot(n, logarithmic(n), label="log n")
+        plt.plot(n, log * logarithmic(n), label=f"{log} · log n")
     if lin:
-        plt.plot(n, linear(n), label="n")
+        plt.plot(n, lin * linear(n), label=f"{lin} · n")
     if quad:
-        plt.plot(n, quadratic(n), label="n^2")
+        plt.plot(n, quad * quadratic(n), label=f"{quad} · n²")
     if cube:
-        plt.plot(n, cubic(n), label="n^3")
+        plt.plot(n, cube * cubic(n), label=f"{cube} · n³")
     if exp:
-        plt.plot(n, exponential(n), label="e^n")
+        plt.plot(n, exp * exponential(n), label=f"{exp} · e^n")
     plt.legend()
     plt.title(f"Sample complexity for {classifier}")
     plt.xlabel("Dimensionality (n)")
