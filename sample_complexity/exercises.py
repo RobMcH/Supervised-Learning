@@ -9,7 +9,7 @@ from sample_complexity.data import generate_data
 from sample_complexity.plotter import plot_sample_complexity
 
 if __name__ == '__main__':
-    n_max, m_max, num_runs = 100, 1000, 50
+    n_max, m_max, num_runs = 100, 450, 50
     perceptron_errors = np.zeros((n_max, m_max))
     lr_errors = np.zeros_like(perceptron_errors)
     winnow_errors = np.zeros_like(perceptron_errors)
