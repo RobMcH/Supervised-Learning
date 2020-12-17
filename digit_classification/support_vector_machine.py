@@ -167,14 +167,18 @@ def train_ova_svm(kernel_matrix, train_y, C):
     return alpha_w, b_w
 
 
-def ova_predict(alpha_w, b_w, train_y, kernel_matrix):
+@numba.njit(parallel=True)
+def ova_predict_(alpha_w, b_w, train_y, kernel_matrix):
     predictions = np.zeros((alpha_w.shape[0], kernel_matrix.shape[1]))
     ys = setup_ys(train_y, np.unique(train_y).size)
     # Loop over OvA classifiers and collect the predictions of each of them.
-    for i in range(alpha_w.shape[0]):
+    for i in numba.prange(alpha_w.shape[0]):
         predictions[i] = predict(alpha_w[i], ys[i], kernel_matrix, b_w[i])
-    # Stack the predictions and get the argmax of each column (i.e., of every data point).
-    return np.argmax(predictions, axis=0)
+    return predictions
+
+
+def ova_predict(alpha_w, b_w, train_y, kernel_matrix):
+    return np.argmax(ova_predict_(alpha_w, b_w, train_y, kernel_matrix), axis=0)
 
 
 def evaluate_svm(alphas, b, train_y, test_y, kernel_matrix):

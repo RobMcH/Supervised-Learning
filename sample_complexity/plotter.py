@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from sample_complexity.utils import logarithmic, linear, quadratic, cubic, exponential
+from utils import logarithmic, linear, quadratic, cubic, exponential
 plt.style.use(['science','no-latex'])
 
 

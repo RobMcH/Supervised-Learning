@@ -1,12 +1,12 @@
 import numpy as np
 from tqdm import tqdm
-from sample_complexity.perceptron import perceptron_fit, perceptron_evaluate
-from sample_complexity.least_squares import fit_linear_regression, evaluate_linear_regression, \
+from perceptron import perceptron_fit, perceptron_evaluate
+from least_squares import fit_linear_regression, evaluate_linear_regression, \
     fit_linear_regression_underdetermined
-from sample_complexity.winnow import winnow_fit, winnow_evaluate
-from sample_complexity.nearest_neighbours import nearest_neighbours_evaluate
-from sample_complexity.data import generate_data
-from sample_complexity.plotter import plot_sample_complexity
+from winnow import winnow_fit, winnow_evaluate
+from nearest_neighbours import nearest_neighbours_evaluate
+from data import generate_data
+from plotter import plot_sample_complexity
 
 if __name__ == '__main__':
     n_max, m_max, num_runs = 100, 450, 50
