@@ -56,7 +56,7 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 
 
 @numba.jit(parallel=True)
-def train_ova_kernel_perceptron(train_y, kernel_matrix):
+def train_ova_kernel_perceptron(train_y, kernel_matrix, max_iterations=100):
     # Initialise weights to matrix of zeros, initialise other variables.
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
@@ -79,21 +79,22 @@ def train_ova_kernel_perceptron(train_y, kernel_matrix):
                     errors[classifier - 1] += 1
         # Stop training when training error stops decreasing.
         error = np.sum(errors)
-        if error >= last_error:
-            break
+        if error < last_error:
+            best_alphas = np.copy(alphas)
+            last_error = error
         # If error decreased, save the weights as the best weights and continue training.
-        best_alphas = np.copy(alphas)
-        last_error = error
+        if epoch >= max_iterations:
+            break
         epoch += 1
     return best_alphas
 
 
-@numba.jit()
+@numba.njit()
 def train_kernel_perceptron(train_y, kernel_matrix):
     # Initialise weights to matrix of zeros, initialise other variables.
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
-    best_alphas, error, last_error, epoch = None, 0, train_y.size + 1, 1
+    best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size + 1, 1
     while True:
         error = 0
         for i in range(train_y.size):
