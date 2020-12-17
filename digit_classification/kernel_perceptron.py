@@ -1,6 +1,8 @@
 import numpy as np
 import numba
 import warnings
+from utils import argmax_axis_0
+
 warnings.filterwarnings("ignore", category=numba.NumbaPerformanceWarning)
 warnings.filterwarnings("ignore", category=numba.NumbaDeprecationWarning)
 warnings.filterwarnings("ignore", category=numba.NumbaWarning)
@@ -123,15 +125,17 @@ def kernel_perceptron_predict(kernel_matrix, alphas):
     return alphas @ kernel_matrix
 
 
+@numba.njit()
 def kernel_perceptron_predict_class(kernel_matrix, alphas):
     """
     Returns a vector of class predictions for a given kernel matrix and the alphas. Each entry of the vector corresponds
     to the predicted class for an example.
     """
     predictions = kernel_perceptron_predict(kernel_matrix, alphas)
-    return np.argmax(predictions, axis=0).reshape(-1, 1)
+    return argmax_axis_0(predictions).reshape((-1, 1))
 
 
+@numba.njit()
 def kernel_perceptron_evaluate(test_y, kernel_matrix, alphas):
     """
     Calculate the error (percentage of wrong predictions) for a given vector of true labels test_y, a kernel matrix,

@@ -39,6 +39,7 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
         kernel_matrix = kernelise_symmetric(x_data, kernel_function, kernel_parameter)
         kernel_sums[index] = kernel_matrix.sum()
         if classifier == "SVM" and kernel_function == polynomial_kernel and index >= 2:
+            # Restrict polynomial kernel matrix for SVM.
             ratio = kernel_sums[index] / kernel_sums[1]
             kernel_matrix /= ratio
         for epoch in tqdm(range(20)):
@@ -71,6 +72,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=None
     test_errors, parameters, confusion_matrices, matrices, error_vectors = [], [], [], [], []
     # Generate train/test splits by generating 20 index pairs.
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
+    kernel_sums = np.zeros(len(kernel_parameters))
     test_index_counts = np.bincount(np.array([index_splits[i][1] for i in range(20)]).reshape(-1),
                                     minlength=indices.size)
     kfold_test_errors = np.zeros((len(kernel_parameters), 20), dtype=np.float64)
@@ -78,6 +80,10 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=None
     for index, kernel_parameter in enumerate(kernel_parameters):
         # Create kernel matrix on full data set and save it for later.
         kernel_matrix = kernelise_symmetric(x_data, kernel_function, kernel_parameter)
+        if classifier == "SVM" and kernel_function == polynomial_kernel and index >= 2:
+            # Restrict polynomial kernel matrix for SVM.
+            ratio = kernel_sums[index] / kernel_sums[1]
+            kernel_matrix /= ratio
         matrices.append(kernel_matrix)
         for epoch in tqdm(range(20)):
             train_indices, test_indices = index_splits[epoch]

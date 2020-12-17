@@ -1,4 +1,5 @@
 import numpy as np
+import numba
 
 
 class KFold:
@@ -63,3 +64,19 @@ def matrices_to_latex_table(mean_matrix, std_matrix):
         row_string = [f"${mean_matrix[i][j]} \\pm {std_matrix[i][j]}$" for j in range(mean_matrix.shape[1])]
         row_string = " & ".join(row_string)
         print("\t", row_string, "\\\\")
+
+
+@numba.njit(parallel=True)
+def argmax_axis_0(array):
+    res = np.zeros(array.shape[1], dtype=np.int64)
+    for i in numba.prange(array.shape[1]):
+        res[i] = np.argmax(array[:, i])
+    return res
+
+
+@numba.njit(parallel=True)
+def argmax_axis_1(array):
+    res = np.zeros(array.shape[0], dtype=np.int64)
+    for i in numba.prange(array.shape[0]):
+        res[i] = np.argmax(array[i])
+    return res

@@ -1,5 +1,6 @@
 import numpy as np
 import numba
+from utils import argmax_axis_0
 
 np.random.seed(42)
 
@@ -168,19 +169,16 @@ def train_ova_svm(kernel_matrix, train_y, C):
 
 
 @numba.njit(parallel=True)
-def ova_predict_(alpha_w, b_w, train_y, kernel_matrix):
+def ova_predict(alpha_w, b_w, train_y, kernel_matrix):
     predictions = np.zeros((alpha_w.shape[0], kernel_matrix.shape[1]))
     ys = setup_ys(train_y, np.unique(train_y).size)
     # Loop over OvA classifiers and collect the predictions of each of them.
     for i in numba.prange(alpha_w.shape[0]):
         predictions[i] = predict(alpha_w[i], ys[i], kernel_matrix, b_w[i])
-    return predictions
+    return argmax_axis_0(predictions)
 
 
-def ova_predict(alpha_w, b_w, train_y, kernel_matrix):
-    return np.argmax(ova_predict_(alpha_w, b_w, train_y, kernel_matrix), axis=0)
-
-
+@numba.njit()
 def evaluate_svm(alphas, b, train_y, test_y, kernel_matrix):
     predictions = ova_predict(alphas, b, train_y, kernel_matrix)
     return (predictions != test_y).sum() / test_y.size * 100
