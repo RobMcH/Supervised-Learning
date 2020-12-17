@@ -55,38 +55,34 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
     return kernel_
 
 
-@numba.jit(parallel=True)
-def train_ova_kernel_perceptron(train_y, kernel_matrix, max_iterations=100):
+@numba.njit()
+def train_binary_kernel_perceptron(train_y, kernel_matrix, class_index):
+    alphas, train_ys = np.zeros(train_y.size, dtype=np.float64), np.where(train_y == class_index, 1.0, -1.0)
+    best_alphas, error, last_error = np.copy(alphas), 0, train_ys.size + 1
+    while True:
+        error = 0
+        for i in range(train_ys.size):
+            y_hat = -1.0 if np.dot(alphas, kernel_matrix[:, i]) < 0 else 1.0
+            y = train_ys[i, 0]
+            if y_hat != y:
+                # Update weights and increase error counter if prediction was wrong.
+                alphas[i] += y
+                error += 1
+        if error >= last_error:
+            break
+        best_alphas = np.copy(alphas)
+        last_error = error
+    return best_alphas
+
+
+@numba.njit(parallel=True)
+def train_ova_kernel_perceptron(train_y, kernel_matrix):
     # Initialise weights to matrix of zeros, initialise other variables.
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
-    best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size * num_classes + 1, 1
-    while True:
-        errors = np.zeros(num_classes)
-        # Loop over classes.
-        for classifier in numba.prange(1, num_classes + 1):
-            for i in range(train_y.size):
-                if epoch == 1:
-                    # In the first epoch the examples were only seen up to index i.
-                    y_hat = -1 if np.dot(alphas[classifier - 1, :i], kernel_matrix[:i, i]) < 0 else 1
-                else:
-                    # In all other epochs every example has already been seen at least once.
-                    y_hat = -1 if np.dot(alphas[classifier - 1, :], kernel_matrix[:, i]) < 0 else 1
-                y = -1 if train_y[i, 0] != classifier - 1 else 1
-                if y_hat != y:
-                    # Update weights and increase error counter if prediction was wrong.
-                    alphas[classifier - 1, i] += y
-                    errors[classifier - 1] += 1
-        # Stop training when training error stops decreasing.
-        error = np.sum(errors)
-        if error < last_error:
-            best_alphas = np.copy(alphas)
-            last_error = error
-        # If error decreased, save the weights as the best weights and continue training.
-        if epoch >= max_iterations:
-            break
-        epoch += 1
-    return best_alphas
+    for classifier in numba.prange(num_classes):
+        alphas[classifier] = train_binary_kernel_perceptron(train_y, kernel_matrix, classifier)
+    return alphas
 
 
 @numba.njit()
