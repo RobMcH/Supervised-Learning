@@ -2,6 +2,8 @@ import numpy as np
 import numba
 import warnings
 warnings.filterwarnings("ignore", category=numba.NumbaPerformanceWarning)
+warnings.filterwarnings("ignore", category=numba.NumbaDeprecationWarning)
+warnings.filterwarnings("ignore", category=numba.NumbaWarning)
 
 
 @numba.njit()
@@ -53,16 +55,16 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
     return kernel_
 
 
-@numba.jit()
+@numba.jit(parallel=True)
 def train_ova_kernel_perceptron(train_y, kernel_matrix):
     # Initialise weights to matrix of zeros, initialise other variables.
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
-    best_alphas, error, last_error, epoch = None, 0, train_y.size * num_classes + 1, 1
+    best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size * num_classes + 1, 1
     while True:
-        error = 0
+        errors = np.zeros(num_classes)
         # Loop over classes.
-        for classifier in range(1, num_classes + 1):
+        for classifier in numba.prange(1, num_classes + 1):
             for i in range(train_y.size):
                 if epoch == 1:
                     # In the first epoch the examples were only seen up to index i.
@@ -74,8 +76,9 @@ def train_ova_kernel_perceptron(train_y, kernel_matrix):
                 if y_hat != y:
                     # Update weights and increase error counter if prediction was wrong.
                     alphas[classifier - 1, i] += y
-                    error += 1
+                    errors[classifier - 1] += 1
         # Stop training when training error stops decreasing.
+        error = np.sum(errors)
         if error >= last_error:
             break
         # If error decreased, save the weights as the best weights and continue training.

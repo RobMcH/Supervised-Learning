@@ -1,18 +1,18 @@
 import numpy as np
 from tqdm import tqdm
-from digit_classification.kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, \
+from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, \
     train_ova_kernel_perceptron, kernel_perceptron_evaluate, kernel_perceptron_predict_class, polynomial_kernel, \
     gaussian_kernel
-from digit_classification.support_vector_machine import train_ova_svm, evaluate_svm
-from digit_classification.data import read_data, random_split_indices
-from digit_classification.utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, \
+from support_vector_machine import train_ova_svm, evaluate_svm
+from data import read_data, random_split_indices
+from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, \
     errors_to_latex_table
-from digit_classification.plotter import plot_confusion_matrix, plot_images
+from plotter import plot_confusion_matrix, plot_images
 
 
 def setup(classifier):
     # Set up necessary variables for the tasks.
-    x_data, y_data = read_data("digit_classification/data/zipcombo.dat")
+    x_data, y_data = read_data("data/zipcombo.dat")
     train_perceptron = None
     if classifier == "SVM":
         y_data = y_data.squeeze().astype(np.float64)
@@ -30,12 +30,17 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
     test_errors = {i: [] for i, j in enumerate(kernel_parameters)}
     # Generate train/test splits by generating 20 index pairs.
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
+    kernel_sums = np.zeros(len(kernel_parameters))
 
     for index, kernel_parameter in enumerate(kernel_parameters):
         print(f"Evaluating kernel parameter {kernel_parameter}")
         # Calculate kernel matrix on full data set. The train and test indices can be used to get the corresponding sub-
         # matrices. This significantly reduces compute time.
         kernel_matrix = kernelise_symmetric(x_data, kernel_function, kernel_parameter)
+        kernel_sums[index] = kernel_matrix.sum()
+        if classifier == "SVM" and kernel_function == polynomial_kernel and index >= 2:
+            ratio = kernel_sums[index] / kernel_sums[1]
+            kernel_matrix /= ratio
         for epoch in tqdm(range(20)):
             # Get random train/test indices, calculate kernel matrix, and calculate alphas.
             train_indices, test_indices = index_splits[epoch]
@@ -142,7 +147,7 @@ if __name__ == '__main__':
     dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     # Task 1.1
-    for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
+    for classifier in ["SVM"]:
         print(f"-------- {classifier} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier, C=1.0), dimensions)
         errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)

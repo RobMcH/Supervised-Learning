@@ -146,15 +146,22 @@ def train_svm(kernel_matrix, train_y, C, max_iterations=100):
     return best_alphas, best_b
 
 
+@numba.njit(parallel=True)
+def setup_ys(train_y, num_classes):
+    ys = np.zeros((num_classes, train_y.size))
+    for i in numba.prange(num_classes):
+        ys[i] = np.where(train_y == i, 1, -1)
+    return ys
+
+
+@numba.njit(parallel=True)
 def train_ova_svm(kernel_matrix, train_y, C):
     num_classes = np.unique(train_y).size
     alpha_w, b_w = np.zeros((num_classes, kernel_matrix.shape[0])), np.zeros(num_classes)
+    ys = setup_ys(train_y, num_classes)
     # Train num_classes OvA SVMs.
-    for i in range(num_classes):
-        temp_y = np.copy(train_y)
-        temp_y[train_y != i] = -1.0
-        temp_y[train_y == i] = 1.0
-        alpha, b = train_svm(kernel_matrix, temp_y, C)
+    for i in numba.prange(num_classes):
+        alpha, b = train_svm(kernel_matrix, ys[i], C)
         alpha_w[i] = alpha
         b_w[i] = b
     return alpha_w, b_w
@@ -162,12 +169,10 @@ def train_ova_svm(kernel_matrix, train_y, C):
 
 def ova_predict(alpha_w, b_w, train_y, kernel_matrix):
     predictions = np.zeros((alpha_w.shape[0], kernel_matrix.shape[1]))
+    ys = setup_ys(train_y, np.unique(train_y).size)
     # Loop over OvA classifiers and collect the predictions of each of them.
     for i in range(alpha_w.shape[0]):
-        temp_y = np.copy(train_y)
-        temp_y[train_y != i] = -1.0
-        temp_y[train_y == i] = 1.0
-        predictions[i] = predict(alpha_w[i], temp_y, kernel_matrix, b_w[i])
+        predictions[i] = predict(alpha_w[i], train_y[i], kernel_matrix, b_w[i])
     # Stack the predictions and get the argmax of each column (i.e., of every data point).
     return np.argmax(predictions, axis=0)
 
