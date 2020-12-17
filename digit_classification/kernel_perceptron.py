@@ -1,7 +1,8 @@
 import numpy as np
 import numba
+import itertools
 import warnings
-from utils import argmax_axis_0
+from utils import argmax_axis_0, count_max_axis_0
 
 warnings.filterwarnings("ignore", category=numba.NumbaPerformanceWarning)
 warnings.filterwarnings("ignore", category=numba.NumbaDeprecationWarning)
@@ -58,14 +59,14 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 
 
 @numba.njit()
-def train_binary_kernel_perceptron(train_y, kernel_matrix, class_index):
-    alphas, train_ys = np.zeros(train_y.size, dtype=np.float64), np.where(train_y == class_index, 1.0, -1.0)
-    best_alphas, error, last_error = np.copy(alphas), 0, train_ys.size + 1
+def train_binary_kernel_perceptron(train_y, kernel_matrix):
+    alphas = np.zeros(train_y.size, dtype=np.float64)
+    best_alphas, error, last_error = np.copy(alphas), 0, train_y.size + 1
     while True:
         error = 0
-        for i in range(train_ys.size):
+        for i in range(train_y.size):
             y_hat = -1.0 if np.dot(alphas, kernel_matrix[:, i]) < 0 else 1.0
-            y = train_ys[i, 0]
+            y = train_y[i]
             if y_hat != y:
                 # Update weights and increase error counter if prediction was wrong.
                 alphas[i] += y
@@ -83,8 +84,48 @@ def train_ova_kernel_perceptron(train_y, kernel_matrix):
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
     for classifier in numba.prange(num_classes):
-        alphas[classifier] = train_binary_kernel_perceptron(train_y, kernel_matrix, classifier)
+        alphas[classifier] = train_binary_kernel_perceptron(np.where(train_y == classifier, 1.0, -1.0), kernel_matrix)
     return alphas
+
+
+@numba.njit(parallel=True)
+def train_ovo_kernel_perceptron_(train_y, kernel_matrix, class_combinations, max_alpha_len):
+    alphas = np.zeros((len(class_combinations), max_alpha_len))
+    for ind in numba.prange(class_combinations.shape[0]):
+        i, j = class_combinations[ind]
+        mask = np.logical_or(train_y == i, train_y == j)
+        temp_y = np.where(train_y[mask] == i, 1.0, -1.0)
+        train_matrix = kernel_matrix[mask][:, mask]
+        alpha = train_binary_kernel_perceptron(temp_y, train_matrix)
+        alphas[ind, :alpha.size] = alpha
+    return alphas
+
+
+@numba.njit(parallel=True)
+def ovo_kernel_perceptron_predict_(train_y, kernel_matrix, alphas, class_combinations):
+    predictions = np.zeros((class_combinations.shape[0], kernel_matrix.shape[1]), dtype=np.int64)
+    for ind in numba.prange(class_combinations.shape[0]):
+        i, j = class_combinations[ind]
+        mask = np.logical_or(train_y == i, train_y == j)
+        predictions[ind] = np.where(alphas[ind][:mask.sum()] @ kernel_matrix[mask] >= 0, i, j)
+    return count_max_axis_0(predictions)
+
+
+def ovo_kernel_perceptron_predict(train_y, kernel_matrix, alphas):
+    num_classes = np.unique(train_y).size
+    class_combinations = np.array(list(itertools.combinations(np.arange(num_classes), 2)))
+    return ovo_kernel_perceptron_predict_(train_y, kernel_matrix, alphas, class_combinations)
+
+
+def evaluate_ovo_kernel_perceptron(test_y, train_y, kernel_matrix, alphas):
+    return (ovo_kernel_perceptron_predict(train_y, kernel_matrix, alphas) != test_y).sum() / test_y.size
+
+
+def train_ovo_kernel_perceptron(train_y, kernel_matrix):
+    num_classes = np.unique(train_y).size
+    class_combinations = np.array(list(itertools.combinations(np.arange(num_classes), 2)))
+    max_alpha_len = np.max([train_y[train_y == i].size for i in range(num_classes)]) * 2
+    return train_ovo_kernel_perceptron_(train_y, kernel_matrix, class_combinations, max_alpha_len)
 
 
 @numba.njit()
@@ -96,16 +137,11 @@ def train_kernel_perceptron(train_y, kernel_matrix):
     while True:
         error = 0
         for i in range(train_y.size):
-            if epoch == 1:
-                # In the first epoch the examples were only seen up to index i.
-                y_hat = np.argmax(np.dot(alphas[:, :i], kernel_matrix[:i, i]))
-            else:
-                # In all other epochs every example has already been seen at least once.
-                y_hat = np.argmax(np.dot(alphas, kernel_matrix[:, i]))
+            y_hat = np.argmax(np.dot(alphas, kernel_matrix[:, i]))
             # Increase error counter and update weights.
-            error += 1 if y_hat != train_y[i, 0] else 0
+            error += 1 if y_hat != train_y[i] else 0
             alphas[y_hat, i] -= 1
-            alphas[train_y[i, 0], i] += 1
+            alphas[train_y[i], i] += 1
         # Stop training when training error stops decreasing.
         if error >= last_error:
             break

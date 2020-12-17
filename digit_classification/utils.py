@@ -80,3 +80,14 @@ def argmax_axis_1(array):
     for i in numba.prange(array.shape[0]):
         res[i] = np.argmax(array[i])
     return res
+
+
+@numba.njit()
+def count_max_axis_0(array):
+    res = np.zeros(array.shape[1], dtype=np.int64)
+    for i in range(array.shape[1]):
+        counts = np.zeros(np.unique(array).size, dtype=np.int64)
+        for j in range(array.shape[0]):
+            counts[array[j, i]] += 1
+        res[i] = counts.argmax()
+    return res

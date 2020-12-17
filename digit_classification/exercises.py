@@ -2,7 +2,7 @@ import numpy as np
 from tqdm import tqdm
 from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, \
     train_ova_kernel_perceptron, kernel_perceptron_evaluate, kernel_perceptron_predict_class, polynomial_kernel, \
-    gaussian_kernel
+    gaussian_kernel, train_ovo_kernel_perceptron, evaluate_ovo_kernel_perceptron
 from support_vector_machine import train_ova_svm, evaluate_svm
 from data import read_data, random_split_indices
 from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, \
@@ -15,9 +15,11 @@ def setup(classifier):
     x_data, y_data = read_data("data/zipcombo.dat")
     train_perceptron = None
     if classifier == "SVM":
-        y_data = y_data.squeeze().astype(np.float64)
+        y_data = y_data.astype(np.float64)
     elif classifier == "OvA-Perceptron":
         train_perceptron = train_ova_kernel_perceptron
+    elif classifier == "OvO-Perceptron":
+        train_perceptron = train_ovo_kernel_perceptron
     elif classifier == "Perceptron":
         train_perceptron = train_kernel_perceptron
     indices = np.arange(0, x_data.shape[0])
@@ -53,8 +55,14 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
                 test_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[test_indices], test_kernel_matrix)
             else:
                 alphas = train_perceptron(y_data[train_indices], train_kernel_matrix)
-                train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
-                test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
+                if classifier != "OvO-Perceptron":
+                    train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
+                    test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
+                else:
+                    train_error = evaluate_ovo_kernel_perceptron(y_data[train_indices], y_data[train_indices],
+                                                                 train_kernel_matrix, alphas)
+                    test_error = evaluate_ovo_kernel_perceptron(y_data[test_indices], y_data[train_indices],
+                                                                test_kernel_matrix, alphas)
             train_errors[index].append(train_error)
             test_errors[index].append(test_error)
     # Analyse results.
@@ -153,7 +161,7 @@ if __name__ == '__main__':
     dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     # Task 1.1
-    for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
+    for classifier in ["OvO-Perceptron", "OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier, C=1.0), dimensions)
         errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)
