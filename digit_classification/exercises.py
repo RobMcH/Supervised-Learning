@@ -1,8 +1,8 @@
 import numpy as np
 from tqdm import tqdm
-from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, \
-    train_ova_kernel_perceptron, kernel_perceptron_evaluate, kernel_perceptron_predict_class, polynomial_kernel, \
-    gaussian_kernel, train_ovo_kernel_perceptron, evaluate_ovo_kernel_perceptron
+from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, train_ova_kernel_perceptron,\
+    kernel_perceptron_evaluate, polynomial_kernel, gaussian_kernel, train_ovo_kernel_perceptron,\
+    evaluate_ovo_kernel_perceptron, kernel_perceptron_predict
 from support_vector_machine import train_ova_svm, evaluate_svm
 from data import read_data, random_split_indices
 from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, \
@@ -53,16 +53,16 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
                 alphas, b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C)
                 train_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[train_indices], train_kernel_matrix)
                 test_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[test_indices], test_kernel_matrix)
-            else:
+            elif "Perceptron" in classifier:
                 alphas = train_perceptron(y_data[train_indices], train_kernel_matrix)
-                if classifier != "OvO-Perceptron":
-                    train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
-                    test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
-                else:
+                if classifier == "OvO-Perceptron":
                     train_error = evaluate_ovo_kernel_perceptron(y_data[train_indices], y_data[train_indices],
                                                                  train_kernel_matrix, alphas)
                     test_error = evaluate_ovo_kernel_perceptron(y_data[test_indices], y_data[train_indices],
                                                                 test_kernel_matrix, alphas)
+                else:
+                    train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
+                    test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
             train_errors[index].append(train_error)
             test_errors[index].append(test_error)
     # Analyse results.
@@ -122,9 +122,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=None
         else:
             best_alphas = train_perceptron(y_data[train_indices], train_kernel_matrix)
             # Find hardest to predict data items for OvA-Perceptron.
-            error_vectors.append(
-                kernel_perceptron_predict_class(test_kernel_matrix, best_alphas) != y_data[test_indices])
-
+            error_vectors.append(kernel_perceptron_predict(test_kernel_matrix, best_alphas) != y_data[test_indices])
         # Calculate test error, and save it and the corresponding parameter value.
         if classifier == "SVM":
             test_error = evaluate_svm(best_alphas, best_b, y_data[train_indices], y_data[test_indices],
@@ -134,7 +132,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=None
         parameters.append(kernel_parameters[param_index])
         test_errors.append(test_error)
         # Calculate confusion matrix on the test data.
-        predictions = kernel_perceptron_predict_class(test_kernel_matrix, best_alphas)
+        predictions = kernel_perceptron_predict(test_kernel_matrix, best_alphas)
         confusion_matrix = generate_absolute_confusion_matrix(predictions, y_data[test_indices], num_classes)
         confusion_matrices.append(confusion_matrix)
     # Find the hardest test examples and plot them.
@@ -158,10 +156,10 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=None
 
 if __name__ == '__main__':
     # Kernel parameters for polynomial and Gaussian kernel.
-    dimensions = [i for i in range(3, 8)]
+    dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     # Task 1.1
-    for classifier in ["OvO-Perceptron", "OvA-Perceptron", "Perceptron", "SVM"]:
+    for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier, C=1.0), dimensions)
         errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)

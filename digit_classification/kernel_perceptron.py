@@ -132,7 +132,7 @@ def train_ovo_kernel_perceptron(train_y, kernel_matrix):
 
 
 @numba.njit()
-def train_kernel_perceptron(train_y, kernel_matrix):
+def train_kernel_perceptron(train_y, kernel_matrix, max_iterations=100):
     # Initialise weights to matrix of zeros, initialise other variables.
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
@@ -146,11 +146,12 @@ def train_kernel_perceptron(train_y, kernel_matrix):
             alphas[y_hat, i] -= 1
             alphas[train_y[i], i] += 1
         # Stop training when training error stops decreasing.
-        if error >= last_error:
-            break
+        if error < last_error:
+            last_error = error
+            best_alphas = np.copy(alphas)
         # If error decreased, save the weights as the best weights and continue training.
-        last_error = error
-        best_alphas = np.copy(alphas)
+        if epoch >= max_iterations:
+            break
         epoch += 1
     return best_alphas
 
@@ -158,20 +159,10 @@ def train_kernel_perceptron(train_y, kernel_matrix):
 @numba.njit()
 def kernel_perceptron_predict(kernel_matrix, alphas):
     """
-    Returns a matrix of regression values given the kernel matrix and the alphas. Each row corresponds to one
-    class, and each column to an example.
-    """
-    return alphas @ kernel_matrix
-
-
-@numba.njit()
-def kernel_perceptron_predict_class(kernel_matrix, alphas):
-    """
     Returns a vector of class predictions for a given kernel matrix and the alphas. Each entry of the vector corresponds
     to the predicted class for an example.
     """
-    predictions = kernel_perceptron_predict(kernel_matrix, alphas)
-    return argmax_axis_0(predictions).reshape((-1, 1))
+    return argmax_axis_0(alphas @ kernel_matrix)
 
 
 @numba.njit()
@@ -181,6 +172,6 @@ def kernel_perceptron_evaluate(test_y, kernel_matrix, alphas):
     and the alphas.
     """
     mistakes, total = 0, test_y.shape[0]
-    predictions = kernel_perceptron_predict_class(kernel_matrix, alphas)
+    predictions = kernel_perceptron_predict(kernel_matrix, alphas)
     mistakes = (predictions != test_y).sum()
     return mistakes / total * 100
