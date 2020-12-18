@@ -1,5 +1,7 @@
 import numpy as np
 import numba
+import itertools
+import tqdm
 from data import read_data, random_split_indices
 
 
@@ -225,13 +227,30 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
     return weights
 
 
+def search_nn_architecture():
+    x, y = read_data("data/zipcombo.dat")
+    indices = np.arange(0, y.size)
+    index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
+    num_hidden_layers = [1, 2, 3]
+    batch_sizes = [16, 32, 64]
+    momentum = [0.0, 0.9]
+    factor = 0.75
+    for n, b, m in itertools.product(num_hidden_layers, batch_sizes, momentum):
+        layer_definition = [(16 * 16, 192)]
+        for hidden_layer in range(n):
+            layer_definition.append((layer_definition[-1][1], int(layer_definition[-1][1] * factor)))
+        layer_definition.append((layer_definition[-1][1], 10))
+        errors, losses = [], []
+        for i in tqdm.trange(20):
+            train, test = index_splits[i]
+            weights, metrics = train_mlp(x[train], y[train], 100, 0.1, layer_definition, return_metrics=True,
+                                         batching="Mini", batch_size=b, momentum=m, print_metrics=False,
+                                         test_xs=x[test], test_ys=y[test])
+            errors.append(metrics["test_err"].min())
+            losses.append(metrics["test_loss"].min())
+        print(f"num hidden layers: {n} - batch size: {b} - momentum: {m} - avg. error {np.average(errors)}"
+              f" - avg. loss {np.average(losses)}")
+
+
 if __name__ == '__main__':
-    train_xs, train_ys = read_data("data/zipcombo.dat")
-    indices = np.arange(0, train_ys.size)
-    train, test = random_split_indices(indices, 0.8)
-    layer_definitions = ((16 * 16, 192), (192, 10))
-    # Train network on data.
-    weights, metrics = train_mlp(train_xs[train], train_ys[train], 200, 0.1, layer_definitions, return_metrics=True,
-                                 batching="Mini", batch_size=64, momentum=0.9, print_metrics=True,
-                                 test_xs=train_xs[test], test_ys=train_ys[test])
-    print(f"Min test error: {metrics['test_err'].min()} & loss: {metrics['test_loss'].min()}")
+    search_nn_architecture()
