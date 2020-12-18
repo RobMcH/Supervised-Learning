@@ -59,9 +59,9 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 
 
 @numba.njit(nogil=True)
-def train_binary_kernel_perceptron(train_y, kernel_matrix, max_alpha_len=0):
+def train_binary_kernel_perceptron(train_y, kernel_matrix, max_alpha_len=0, max_iterations=10):
     alphas = np.zeros(max_alpha_len, dtype=np.float64)
-    best_alphas, error, last_error = np.copy(alphas), 0, train_y.size + 1
+    best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size + 1, 1
     while True:
         error = 0
         for i in range(train_y.size):
@@ -71,10 +71,12 @@ def train_binary_kernel_perceptron(train_y, kernel_matrix, max_alpha_len=0):
                 # Update weights and increase error counter if prediction was wrong.
                 alphas[i] += y
                 error += 1
-        if error >= last_error:
+        if error < last_error:
+            best_alphas = np.copy(alphas)
+            last_error = error
+        if epoch >= max_iterations:
             break
-        best_alphas = np.copy(alphas)
-        last_error = error
+        epoch += 1
     return best_alphas
 
 
@@ -119,7 +121,7 @@ def ovo_kernel_perceptron_predict(train_y, kernel_matrix, alphas):
 
 
 def evaluate_ovo_kernel_perceptron(test_y, train_y, kernel_matrix, alphas):
-    return (ovo_kernel_perceptron_predict(train_y, kernel_matrix, alphas) != test_y).sum() / test_y.size
+    return (ovo_kernel_perceptron_predict(train_y, kernel_matrix, alphas) != test_y).sum() / test_y.size * 100.0
 
 
 def train_ovo_kernel_perceptron(train_y, kernel_matrix):

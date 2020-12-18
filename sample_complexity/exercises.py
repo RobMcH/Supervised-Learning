@@ -34,10 +34,7 @@ if __name__ == '__main__':
                 w = perceptron_fit(train_x, train_y)
                 perceptron_errors[n - 1, m - 1] += perceptron_evaluate(w, dev_x, dev_y)
                 # Evaluate least squares.
-                if n > m or np.linalg.det(train_x.T @ train_x) == 0:
-                    parameters = fit_linear_regression_underdetermined(train_x, train_y)
-                else:
-                    parameters = fit_linear_regression(train_x, train_y)
+                parameters = fit_linear_regression_underdetermined(train_x, train_y)
                 lr_errors[n - 1, m - 1] += evaluate_linear_regression(parameters, dev_x, dev_y)
                 # Evaluate winnow.
                 w = winnow_fit(winnow_x, winnow_y)
