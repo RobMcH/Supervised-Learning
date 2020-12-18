@@ -31,7 +31,7 @@ def gaussian_kernel(p, q, c):
     return np.exp(np.multiply(-c, np.power(np.linalg.norm(p - q), 2)))
 
 
-@numba.njit(parallel=True)
+@numba.njit(parallel=True, nogil=True)
 def kernelise(x_i, x_j, kernel_function, kernel_parameter):
     """
     Creates a Gaussian kernel matrix based on the input data matrices x_i and x_j.
@@ -44,7 +44,7 @@ def kernelise(x_i, x_j, kernel_function, kernel_parameter):
     return kernel_
 
 
-@numba.njit(parallel=True)
+@numba.njit(parallel=True, nogil=True)
 def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
     """
     Creates a Gaussian kernel matrix based on the input data matrix x_i. This method makes use of the symmetry of the
@@ -58,14 +58,14 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
     return kernel_
 
 
-@numba.njit()
-def train_binary_kernel_perceptron(train_y, kernel_matrix):
-    alphas = np.zeros(train_y.size, dtype=np.float64)
+@numba.njit(nogil=True)
+def train_binary_kernel_perceptron(train_y, kernel_matrix, max_alpha_len=0):
+    alphas = np.zeros(max_alpha_len, dtype=np.float64)
     best_alphas, error, last_error = np.copy(alphas), 0, train_y.size + 1
     while True:
         error = 0
         for i in range(train_y.size):
-            y_hat = -1.0 if np.dot(alphas, kernel_matrix[:, i]) < 0 else 1.0
+            y_hat = -1.0 if np.dot(alphas[:train_y.size], kernel_matrix[:, i]) < 0 else 1.0
             y = train_y[i]
             if y_hat != y:
                 # Update weights and increase error counter if prediction was wrong.
@@ -78,43 +78,44 @@ def train_binary_kernel_perceptron(train_y, kernel_matrix):
     return best_alphas
 
 
-@numba.njit(parallel=True)
+@numba.njit(parallel=True, nogil=True)
 def train_ova_kernel_perceptron(train_y, kernel_matrix):
     # Initialise weights to matrix of zeros, initialise other variables.
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
     for classifier in numba.prange(num_classes):
-        alphas[classifier] = train_binary_kernel_perceptron(np.where(train_y == classifier, 1.0, -1.0), kernel_matrix)
+        alphas[classifier] = train_binary_kernel_perceptron(np.where(train_y == classifier, 1.0, -1.0), kernel_matrix,
+                                                            train_y.size)
     return alphas
 
 
-@numba.njit(parallel=True)
+@numba.njit(parallel=True, nogil=True)
 def train_ovo_kernel_perceptron_(train_y, kernel_matrix, class_combinations, max_alpha_len):
-    alphas = np.zeros((len(class_combinations), max_alpha_len))
-    for ind in numba.prange(class_combinations.shape[0]):
+    alphas = np.zeros((class_combinations.shape[0], max_alpha_len))
+    for ind in numba.prange(len(class_combinations)):
         i, j = class_combinations[ind]
         mask = np.logical_or(train_y == i, train_y == j)
         temp_y = np.where(train_y[mask] == i, 1.0, -1.0)
         train_matrix = kernel_matrix[mask][:, mask]
-        alpha = train_binary_kernel_perceptron(temp_y, train_matrix)
-        alphas[ind, :alpha.size] = alpha
+        alphas[ind] = train_binary_kernel_perceptron(temp_y, train_matrix, max_alpha_len)
     return alphas
 
 
-@numba.njit(parallel=True)
+@numba.njit(parallel=True, nogil=True)
 def ovo_kernel_perceptron_predict_(train_y, kernel_matrix, alphas, class_combinations):
-    predictions = np.zeros((class_combinations.shape[0], kernel_matrix.shape[1]), dtype=np.int64)
+    predictions = np.zeros((class_combinations.shape[0], kernel_matrix.shape[1]))
     for ind in numba.prange(class_combinations.shape[0]):
         i, j = class_combinations[ind]
         mask = np.logical_or(train_y == i, train_y == j)
         predictions[ind] = np.where(alphas[ind][:mask.sum()] @ kernel_matrix[mask] >= 0, i, j)
-    return count_max_axis_0(predictions)
+    return predictions
 
 
 def ovo_kernel_perceptron_predict(train_y, kernel_matrix, alphas):
     num_classes = np.unique(train_y).size
     class_combinations = np.array(list(itertools.combinations(np.arange(num_classes), 2)))
-    return ovo_kernel_perceptron_predict_(train_y, kernel_matrix, alphas, class_combinations)
+    predictions = ovo_kernel_perceptron_predict_(train_y, kernel_matrix, alphas, class_combinations)
+    return count_max_axis_0(predictions)
 
 
 def evaluate_ovo_kernel_perceptron(test_y, train_y, kernel_matrix, alphas):
