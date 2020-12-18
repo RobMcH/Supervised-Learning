@@ -70,7 +70,7 @@ def forward_pass(xs, weights, return_prediction=False, activation=sigma):
     return forward_dict
 
 
-def backward_pass(xs, ys, weights, forward_dict, activation_derivative=sigma_prime):
+def backward_pass(xs, ys, weights, forward_dict, activation_derivative=sigma_prime, l2_reg=0.0):
     """
     Calculates one backward pass of the model.
     """
@@ -83,7 +83,7 @@ def backward_pass(xs, ys, weights, forward_dict, activation_derivative=sigma_pri
     for i in range(num_layers - 1, -1, -1):
         # Loop through the layers and calculate the gradients for each weight/bias vector.
         prev_output = forward_dict[f"h{i}_sigma"] if i >= 1 else xs
-        weight_gradient = prev_output.T @ delta
+        weight_gradient = prev_output.T @ delta + l2_reg * weights[i][0]
         bias_gradient = np.sum(delta, axis=0)
         gradients.append((weight_gradient, bias_gradient))
         if i != 0:
@@ -104,12 +104,12 @@ def initialise_weights(layers):
     return weights
 
 
-def analytical_gradients(xs, ys, weights, activation=sigma, activation_derivative=sigma_prime):
+def analytical_gradients(xs, ys, weights, activation=sigma, activation_derivative=sigma_prime, l2_reg=0.0):
     """
     Calculate the analytical gradients of the model.
     """
     forward_dict = forward_pass(xs, weights, activation=activation)
-    gradients = backward_pass(xs, ys, weights, forward_dict, activation_derivative=activation_derivative)
+    gradients = backward_pass(xs, ys, weights, forward_dict, activation_derivative=activation_derivative, l2_reg=l2_reg)
     return gradients, forward_dict
 
 
@@ -145,8 +145,8 @@ def update_weights(weights, gradients, learning_rate, layer_count, momentum, pre
 
 
 def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, batching="Full", batch_size=0,
-              momentum=0.0, return_metrics=False, return_best_weights=False, print_metrics=True, test_xs=None,
-              test_ys=None):
+              momentum=0.0, l2_reg=0.0, return_metrics=False, return_best_weights=False, print_metrics=True,
+              test_xs=None, test_ys=None):
     """
     Trains a multi-layer perceptron. The training is performed by gradient descent and backpropagation. The training
     supports different batch modes ('Full', 'Mini', and 'SGD'). The parameter batch_size specifies the size of a single
@@ -200,7 +200,7 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
                 rng.shuffle(y_batches)
             for i in range(len(x_batches)):
                 # Train on mini-batches. prev_gradients is only used if momentum > 0.0.
-                gradients, forward_dict = analytical_gradients(x_batches[i], y_batches[i], weights)
+                gradients, forward_dict = analytical_gradients(x_batches[i], y_batches[i], weights, l2_reg=l2_reg)
                 weights = optimizer(weights, gradients, learning_rate, layer_count, momentum, prev_gradients)
                 prev_gradients = gradients
         else:
@@ -244,7 +244,7 @@ def search_nn_architecture():
         for i in tqdm.trange(20):
             train, test = index_splits[i]
             weights, metrics = train_mlp(x[train], y[train], 100, 0.1, layer_definition, return_metrics=True,
-                                         batching="Mini", batch_size=b, momentum=m, print_metrics=False,
+                                         batching="Mini", batch_size=b, momentum=m, l2_reg=0.01, print_metrics=False,
                                          test_xs=x[test], test_ys=y[test])
             errors.append(metrics["test_err"].min())
             losses.append(metrics["test_loss"].min())
