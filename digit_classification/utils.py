@@ -41,13 +41,16 @@ def errors_to_latex_table(train_errors, test_errors, kernel_parameters):
         print(f"\t{k} & ${train_error} \\pm {train_std}$ & ${test_error} \\pm {test_std}$ \\\\")
 
 
+@numba.njit(parallel=True)
 def generate_absolute_confusion_matrix(predictions, y, num_classes):
-    confusion_matrix = np.zeros((num_classes, num_classes))
-    assert predictions.shape == y.shape
+    confusion_matrix = np.zeros((num_classes, num_classes), dtype=np.float64)
     # Calculate absolute number of confusions.
     for i in range(predictions.shape[0]):
         if y[i] != predictions[i]:
-            confusion_matrix[y[i], predictions[i]] += 1
+            confusion_matrix[y[i], predictions[i]] += 1.0
+    for i in numba.prange(confusion_matrix.shape[0]):
+        for j in range(confusion_matrix.shape[1]):
+            confusion_matrix[i, j] /= (y == i).sum()
     return confusion_matrix
 
 

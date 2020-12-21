@@ -115,6 +115,7 @@ def train_svm(kernel_matrix, train_y, C, max_iterations=100):
     errors = np.zeros_like(alphas, dtype=np.float64) - train_y
     num_changed, examine_all = 0, True
     best_alphas, best_b, lowest_error, epoch = None, None, 100.0, 1
+    # Training loop.
     while num_changed > 0 or examine_all:
         num_changed = 0
         if examine_all:

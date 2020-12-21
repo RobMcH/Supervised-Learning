@@ -59,13 +59,13 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 
 
 @numba.njit(nogil=True)
-def train_binary_kernel_perceptron(train_y, kernel_matrix, max_alpha_len=0, max_iterations=100):
-    alphas = np.zeros(max_alpha_len, dtype=np.float64)
+def train_binary_kernel_perceptron(train_y, kernel_matrix, max_iterations=100):
+    alphas = np.zeros(train_y.size, dtype=np.float64)
     best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size + 1, 1
     while True:
         error = 0
         for i in range(train_y.size):
-            y_hat = -1.0 if np.dot(alphas[:train_y.size], kernel_matrix[:, i]) < 0 else 1.0
+            y_hat = -1.0 if np.dot(alphas, kernel_matrix[:, i]) < 0 else 1.0
             y = train_y[i]
             if y_hat != y:
                 # Update weights and increase error counter if prediction was wrong.
@@ -86,8 +86,7 @@ def train_ova_kernel_perceptron(train_y, kernel_matrix):
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
     for classifier in numba.prange(num_classes):
-        alphas[classifier] = train_binary_kernel_perceptron(np.where(train_y == classifier, 1.0, -1.0), kernel_matrix,
-                                                            train_y.size)
+        alphas[classifier] = train_binary_kernel_perceptron(np.where(train_y == classifier, 1.0, -1.0), kernel_matrix)
     return alphas
 
 
@@ -99,7 +98,8 @@ def train_ovo_kernel_perceptron_(train_y, kernel_matrix, class_combinations, max
         mask = np.logical_or(train_y == i, train_y == j)
         temp_y = np.where(train_y[mask] == i, 1.0, -1.0)
         train_matrix = kernel_matrix[mask][:, mask]
-        alphas[ind] = train_binary_kernel_perceptron(temp_y, train_matrix, max_alpha_len)
+        alpha = train_binary_kernel_perceptron(temp_y, train_matrix)
+        alphas[ind, :alpha.size] = alpha
     return alphas
 
 
@@ -139,6 +139,7 @@ def train_kernel_perceptron(train_y, kernel_matrix, max_iterations=100):
     best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size + 1, 1
     while True:
         error = 0
+        running_sum = 0.0
         for i in range(train_y.size):
             y_hat = np.argmax(np.dot(alphas, kernel_matrix[:, i]))
             # Increase error counter and update weights.

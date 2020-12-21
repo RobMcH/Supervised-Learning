@@ -119,8 +119,9 @@ def calculate_error_loss(xs, weights, true):
     """
     predictions = forward_pass(xs, weights, return_prediction=True)
     ys = np.eye(predictions.shape[1])[true]
-    return cross_entropy_loss(ys, predictions) / predictions.shape[0], (
-            predictions.argmax(axis=1) != true).sum() / true.size * 100.0
+    loss = cross_entropy_loss(ys, predictions) / predictions.shape[0]
+    error = (predictions.argmax(axis=1) != true).sum() / true.size * 100.0
+    return loss, error
 
 
 def update_weights(weights, gradients, learning_rate, layer_count, momentum, prev_gradients):
@@ -231,25 +232,19 @@ def search_nn_architecture():
     x, y = read_data("data/zipcombo.dat")
     indices = np.arange(0, y.size)
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
-    num_hidden_layers = [1, 2, 3]
     batch_sizes = [16, 32, 64]
     momentum = [0.0, 0.9]
-    factor = 0.75
-    for n, b, m in itertools.product(num_hidden_layers, batch_sizes, momentum):
-        layer_definition = [(16 * 16, 192)]
-        for hidden_layer in range(n):
-            layer_definition.append((layer_definition[-1][1], int(layer_definition[-1][1] * factor)))
-        layer_definition.append((layer_definition[-1][1], 10))
+    layer_definition = [(16 * 16, 192), (192, 128), (128, 10)]
+    for b, m in itertools.product(batch_sizes, momentum):
         errors, losses = [], []
         for i in tqdm.trange(20):
             train, test = index_splits[i]
             weights, metrics = train_mlp(x[train], y[train], 100, 0.1, layer_definition, return_metrics=True,
-                                         batching="Mini", batch_size=b, momentum=m, l2_reg=0.01, print_metrics=False,
+                                         batching="Mini", batch_size=b, momentum=m, l2_reg=0.0, print_metrics=False,
                                          test_xs=x[test], test_ys=y[test])
             errors.append(metrics["test_err"].min())
             losses.append(metrics["test_loss"].min())
-        print(f"num hidden layers: {n} - batch size: {b} - momentum: {m} - avg. error {np.average(errors)}"
-              f" - avg. loss {np.average(losses)}")
+        print(f" batch size: {b} - momentum: {m} - avg. error {np.average(errors)} - avg. loss {np.average(losses)}")
 
 
 if __name__ == '__main__':
