@@ -40,14 +40,14 @@ if __name__ == '__main__':
                 winnow_errors[n - 1, m - 1] += winnow_evaluate(w, winnow_dev_x, winnow_dev_y)
                 # Evaluate 1-nn. Only compute 1-nn for the current value of n if any value of m resulted in <= 10.0
                 # generalisation error for the previous n.
-                if n < 2 or nn_count < 3 and ((nn_changes[n - 2].any() and (nn_errors[n - 2] / i) <= 10.0).any()):
+                """if n < 2 or nn_count < 3 and ((nn_changes[n - 2].any() and (nn_errors[n - 2] / i) <= 10.0).any()):
                     nn_error = nearest_neighbours_evaluate(train_x, train_y, dev_x, dev_y)
                     nn_errors[n - 1, m - 1] += nn_error
                     nn_changes[n - 1, m - 1] = True
                     if nn_error <= 10.0:
                         nn_count += 1
                     else:
-                        nn_count = 0
+                        nn_count = 0"""
     x_vals = np.arange(1, n_max + 1)
     # Plot perceptron sample complexity.
     perceptron_errors = perceptron_errors / num_runs <= 10.0
@@ -62,9 +62,9 @@ if __name__ == '__main__':
     min_samples = np.argmax(winnow_errors, axis=1) + 1
     plot_sample_complexity(x_vals, min_samples, "winnow", log=7.6)
     # Plot 1-nn sample complexity.
-    nn_errors = np.logical_and(nn_errors / num_runs <= 10.0, nn_changes)
+    """nn_errors = np.logical_and(nn_errors / num_runs <= 10.0, nn_changes)
     min_samples = np.argmax(nn_errors, axis=1)
     mask = np.any(nn_errors, axis=1)
     min_samples[mask] += 1
     min_samples[~mask] = -1
-    plot_sample_complexity(x_vals, min_samples, "1-nearest neighbour", cube=1)
+    plot_sample_complexity(x_vals, min_samples, "1-nearest neighbour", cube=1)"""
