@@ -50,13 +50,13 @@ def generate_absolute_confusion_matrix(predictions, y, num_classes):
             confusion_matrix[y[i], predictions[i]] += 1.0
     for i in numba.prange(confusion_matrix.shape[0]):
         for j in range(confusion_matrix.shape[1]):
-            confusion_matrix[i, j] /= (y == i).sum() * 100.0
+            confusion_matrix[i, j] = confusion_matrix[i, j] * 100.0 / (y == i).sum()
     return confusion_matrix
 
 
 def merge_confusion_matrices(confusion_matrices):
     # Merge multiple confusion matrices into a single one containing the mean, and one containing the std. deviations.
-    merged_matrix = np.average(np.array(confusion_matrices), axis=0)
+    merged_matrix = np.around(np.average(np.array(confusion_matrices), axis=0), 2)
     std_matrix = np.around(np.array(confusion_matrices).std(axis=0), 2)
     return merged_matrix, std_matrix
 
