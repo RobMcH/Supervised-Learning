@@ -139,7 +139,6 @@ def train_kernel_perceptron(train_y, kernel_matrix, max_iterations=100):
     best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size + 1, 1
     while True:
         error = 0
-        running_sum = 0.0
         for i in range(train_y.size):
             y_hat = np.argmax(np.dot(alphas, kernel_matrix[:, i]))
             # Increase error counter and update weights.

@@ -1,8 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 from perceptron import perceptron_fit, perceptron_evaluate
-from least_squares import fit_linear_regression, evaluate_linear_regression, \
-    fit_linear_regression_underdetermined
+from least_squares import evaluate_linear_regression, fit_linear_regression_underdetermined
 from winnow import winnow_fit, winnow_evaluate
 from nearest_neighbours import nearest_neighbours_evaluate
 from data import generate_data
@@ -34,10 +33,7 @@ if __name__ == '__main__':
                 w = perceptron_fit(train_x, train_y)
                 perceptron_errors[n - 1, m - 1] += perceptron_evaluate(w, dev_x, dev_y)
                 # Evaluate least squares.
-                if n > m or np.linalg.det(train_x.T @ train_x) == 0:
-                    parameters = fit_linear_regression_underdetermined(train_x, train_y)
-                else:
-                    parameters = fit_linear_regression(train_x, train_y)
+                parameters = fit_linear_regression_underdetermined(train_x, train_y)
                 lr_errors[n - 1, m - 1] += evaluate_linear_regression(parameters, dev_x, dev_y)
                 # Evaluate winnow.
                 w = winnow_fit(winnow_x, winnow_y)
@@ -55,24 +51,15 @@ if __name__ == '__main__':
     x_vals = np.arange(1, n_max + 1)
     # Plot perceptron sample complexity.
     perceptron_errors = perceptron_errors / num_runs <= 10.0
-    min_samples = np.argmax(perceptron_errors, axis=1)
-    mask = np.any(perceptron_errors, axis=1)
-    min_samples[mask] += 1
-    min_samples[~mask] = -1
+    min_samples = np.argmax(perceptron_errors, axis=1) + 1
     plot_sample_complexity(x_vals, min_samples, "perceptron", lin=1.8)
     # Plot least squares sample complexity.
     lr_errors = lr_errors / num_runs <= 10.0
-    min_samples = np.argmax(lr_errors, axis=1)
-    mask = np.any(lr_errors, axis=1)
-    min_samples[mask] += 1
-    min_samples[~mask] = -1
-    plot_sample_complexity(x_vals, min_samples, "least squares", lin=1)
+    min_samples = np.argmax(lr_errors, axis=1) + 1
+    plot_sample_complexity(x_vals, min_samples, "least squares", lin=0.91)
     # Plot winnow sample complexity.
     winnow_errors = winnow_errors / num_runs <= 10.0
-    min_samples = np.argmax(winnow_errors, axis=1)
-    mask = np.any(perceptron_errors, axis=1)
-    min_samples[mask] += 1
-    min_samples[~mask] = -1
+    min_samples = np.argmax(winnow_errors, axis=1) + 1
     plot_sample_complexity(x_vals, min_samples, "winnow", log=7.6)
     # Plot 1-nn sample complexity.
     nn_errors = np.logical_and(nn_errors / num_runs <= 10.0, nn_changes)

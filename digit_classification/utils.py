@@ -50,7 +50,7 @@ def generate_absolute_confusion_matrix(predictions, y, num_classes):
             confusion_matrix[y[i], predictions[i]] += 1.0
     for i in numba.prange(confusion_matrix.shape[0]):
         for j in range(confusion_matrix.shape[1]):
-            confusion_matrix[i, j] /= (y == i).sum()
+            confusion_matrix[i, j] /= (y == i).sum() * 100.0
     return confusion_matrix
 
 
