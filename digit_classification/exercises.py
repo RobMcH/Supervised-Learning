@@ -156,7 +156,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=None
 
 if __name__ == '__main__':
     # Kernel parameters for polynomial and Gaussian kernel.
-    dimensions = [i for i in range(1, 4)]
+    dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
     task_1_2(polynomial_kernel, dimensions, "OvA-Perceptron")
     # Task 1.1
