@@ -2,8 +2,7 @@ import numba
 import numpy as np
 from tqdm import tqdm
 from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, train_ova_kernel_perceptron, \
-    kernel_perceptron_evaluate, polynomial_kernel, gaussian_kernel, train_ovo_kernel_perceptron, \
-    evaluate_ovo_kernel_perceptron, kernel_perceptron_predict
+    kernel_perceptron_evaluate, polynomial_kernel, gaussian_kernel, kernel_perceptron_predict
 from support_vector_machine import train_ova_svm, evaluate_svm
 from data import read_data, random_split_indices
 from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, \
@@ -19,8 +18,6 @@ def setup(classifier):
         y_data = y_data.astype(np.float64)
     elif classifier == "OvA-Perceptron":
         train_perceptron = train_ova_kernel_perceptron
-    elif classifier == "OvO-Perceptron":
-        train_perceptron = train_ovo_kernel_perceptron
     elif classifier == "Perceptron":
         train_perceptron = train_kernel_perceptron
     indices = np.arange(0, x_data.shape[0])
@@ -164,9 +161,8 @@ if __name__ == '__main__':
     # Kernel parameters for polynomial and Gaussian kernel.
     dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
-    print(*task_1_2(polynomial_kernel, dimensions, classifier="OvA-Perceptron", C=1.0))
     # Task 1.1
-    """for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
+    for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier, C=1.0), dimensions)
         errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)
@@ -174,4 +170,4 @@ if __name__ == '__main__':
     for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
         print(*task_1_2(polynomial_kernel, dimensions, classifier=classifier, C=1.0))
-        print(*task_1_2(gaussian_kernel, cs, classifier=classifier, C=1.0))"""
+        print(*task_1_2(gaussian_kernel, cs, classifier=classifier, C=1.0))
