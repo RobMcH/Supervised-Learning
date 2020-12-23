@@ -59,7 +59,7 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 
 
 @numba.njit(nogil=True)
-def train_binary_kernel_perceptron(train_y, kernel_matrix, max_iterations=10):
+def train_binary_kernel_perceptron(train_y, kernel_matrix, max_iterations=100):
     alphas = np.zeros(train_y.size, dtype=np.float64)
     best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size + 1, 1
     mask = alphas != 0
@@ -134,7 +134,7 @@ def train_ovo_kernel_perceptron(train_y, kernel_matrix):
 
 
 @numba.njit()
-def train_kernel_perceptron(train_y, kernel_matrix, max_iterations=10):
+def train_kernel_perceptron(train_y, kernel_matrix, max_iterations=100):
     # Initialise weights to matrix of zeros, initialise other variables.
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
