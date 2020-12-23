@@ -1,7 +1,8 @@
+import numba
 import numpy as np
 from tqdm import tqdm
-from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, train_ova_kernel_perceptron,\
-    kernel_perceptron_evaluate, polynomial_kernel, gaussian_kernel, train_ovo_kernel_perceptron,\
+from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, train_ova_kernel_perceptron, \
+    kernel_perceptron_evaluate, polynomial_kernel, gaussian_kernel, train_ovo_kernel_perceptron, \
     evaluate_ovo_kernel_perceptron, kernel_perceptron_predict
 from support_vector_machine import train_ova_svm, evaluate_svm
 from data import read_data, random_split_indices
@@ -26,6 +27,24 @@ def setup(classifier):
     return x_data, y_data, indices, train_perceptron
 
 
+@numba.njit(parallel=True, nogil=True)
+def evaluate_classifiers(index_splits, kernel_matrix, train_perceptron, classifier, y_data, C):
+    train_errors, test_errors = np.zeros(20), np.zeros(20)
+    for i in numba.prange(20):
+        train_indices, test_indices = index_splits[i]
+        train_kernel_matrix = kernel_matrix[train_indices][:, train_indices]
+        test_kernel_matrix = kernel_matrix[train_indices][:, test_indices]
+        if classifier == "SVM":
+            alphas, b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C)
+            train_errors[i] = evaluate_svm(alphas, b, y_data[train_indices], y_data[train_indices], train_kernel_matrix)
+            test_errors[i] = evaluate_svm(alphas, b, y_data[train_indices], y_data[test_indices], test_kernel_matrix)
+        elif "Perceptron" in classifier:
+            alphas = train_perceptron(y_data[train_indices], train_kernel_matrix)
+            train_errors[i] = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
+            test_errors[i] = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
+    return train_errors, test_errors
+
+
 def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None):
     x_data, y_data, indices, train_perceptron = setup(classifier)
     train_errors = {i: [] for i, j in enumerate(kernel_parameters)}
@@ -34,8 +53,7 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
     kernel_sums = np.zeros(len(kernel_parameters))
 
-    for index, kernel_parameter in enumerate(kernel_parameters):
-        print(f"Evaluating kernel parameter {kernel_parameter}")
+    for index, kernel_parameter in enumerate(tqdm(kernel_parameters)):
         # Calculate kernel matrix on full data set. The train and test indices can be used to get the corresponding sub-
         # matrices. This significantly reduces compute time.
         kernel_matrix = kernelise_symmetric(x_data, kernel_function, kernel_parameter)
@@ -44,27 +62,8 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
             # Restrict polynomial kernel matrix for SVM.
             ratio = kernel_sums[index] / kernel_sums[1]
             kernel_matrix /= ratio
-        for epoch in tqdm(range(20)):
-            # Get random train/test indices, calculate kernel matrix, and calculate alphas.
-            train_indices, test_indices = index_splits[epoch]
-            train_kernel_matrix = kernel_matrix[train_indices, train_indices.reshape((-1, 1))]
-            test_kernel_matrix = kernel_matrix[train_indices.reshape((-1, 1)), test_indices]
-            if classifier == "SVM":
-                alphas, b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C)
-                train_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[train_indices], train_kernel_matrix)
-                test_error = evaluate_svm(alphas, b, y_data[train_indices], y_data[test_indices], test_kernel_matrix)
-            elif "Perceptron" in classifier:
-                alphas = train_perceptron(y_data[train_indices], train_kernel_matrix)
-                if classifier == "OvO-Perceptron":
-                    train_error = evaluate_ovo_kernel_perceptron(y_data[train_indices], y_data[train_indices],
-                                                                 train_kernel_matrix, alphas)
-                    test_error = evaluate_ovo_kernel_perceptron(y_data[test_indices], y_data[train_indices],
-                                                                test_kernel_matrix, alphas)
-                else:
-                    train_error = kernel_perceptron_evaluate(y_data[train_indices], train_kernel_matrix, alphas)
-                    test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, alphas)
-            train_errors[index].append(train_error)
-            test_errors[index].append(test_error)
+        train_errors[index], test_errors[index] = evaluate_classifiers(index_splits, kernel_matrix, train_perceptron,
+                                                                       classifier, y_data, C)
     # Analyse results.
     train_errors_mean_std = [(np.around(np.average(errors), 3), np.around(np.std(errors), 3)) for errors in
                              train_errors.values()]
@@ -159,8 +158,9 @@ if __name__ == '__main__':
     # Kernel parameters for polynomial and Gaussian kernel.
     dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
+    errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier="OvA-Perceptron", C=1.0), dimensions)
     # Task 1.1
-    for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
+    """for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier, C=1.0), dimensions)
         errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, C=1.0), cs)
@@ -168,4 +168,4 @@ if __name__ == '__main__':
     for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
         print(*task_1_2(polynomial_kernel, dimensions, classifier=classifier, C=1.0))
-        print(*task_1_2(gaussian_kernel, cs, classifier=classifier, C=1.0))
+        print(*task_1_2(gaussian_kernel, cs, classifier=classifier, C=1.0))"""
