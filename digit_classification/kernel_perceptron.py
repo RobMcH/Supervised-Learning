@@ -62,14 +62,16 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 def train_binary_kernel_perceptron(train_y, kernel_matrix, max_iterations=10):
     alphas = np.zeros(train_y.size, dtype=np.float64)
     best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size + 1, 1
+    mask = alphas != 0.0
     while True:
         error = 0
         for i in range(train_y.size):
-            y_hat = -1.0 if np.dot(alphas, kernel_matrix[:, i]) < 0 else 1.0
+            y_hat = -1.0 if np.dot(alphas[mask], kernel_matrix[mask, i]) < 0 else 1.0
             y = train_y[i]
             if y_hat != y:
                 # Update weights and increase error counter if prediction was wrong.
                 alphas[i] += y
+                mask[i] = alphas[i] != 0
                 error += 1
         if error < last_error:
             best_alphas = np.copy(alphas)
@@ -137,14 +139,17 @@ def train_kernel_perceptron(train_y, kernel_matrix, max_iterations=10):
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
     best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size + 1, 1
+    mask = alphas != 0
     while True:
         error = 0
         for i in range(train_y.size):
-            y_hat = np.argmax(np.dot(alphas, kernel_matrix[:, i]))
+            y_hat = np.argmax(np.dot(alphas[:, mask], kernel_matrix[mask, i]))
             # Increase error counter and update weights.
-            error += 1 if y_hat != train_y[i] else 0
             alphas[y_hat, i] -= 1
             alphas[train_y[i], i] += 1
+            if y_hat != train_y[i]:
+                error += 1
+                mask[i] = (alphas[:, i] != 0).any()
         # Stop training when training error stops decreasing.
         if error < last_error:
             last_error = error
