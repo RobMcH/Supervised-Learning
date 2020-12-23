@@ -20,13 +20,16 @@ def calculate_line_bounds(y_1, y_2, alpha_1, alpha_2, C):
 @numba.njit()
 def objective(alphas, kernel_matrix, ys):
     # Calculate the SVM objective function.
-    return np.sum(alphas) - np.sum(
-        np.multiply(np.outer(ys, ys), np.multiply(kernel_matrix, np.outer(alphas, alphas)))) / 2
+    mask = alphas != 0
+    return np.sum(alphas[mask]) - np.sum(np.multiply(np.outer(ys[mask], ys[mask]),
+                                                     np.multiply(kernel_matrix[mask][:, mask],
+                                                                 np.outer(alphas[mask], alphas[mask])))) / 2
 
 
 @numba.njit()
 def predict(alphas, train_y, kernel_matrix, b):
-    return np.multiply(alphas, train_y) @ kernel_matrix - b
+    mask = alphas != 0
+    return np.multiply(alphas[mask], train_y[mask]) @ kernel_matrix[mask] - b
 
 
 @numba.njit()
