@@ -88,6 +88,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=None
     for index, kernel_parameter in enumerate(kernel_parameters):
         # Create kernel matrix on full data set and save it for later.
         kernel_matrix = kernelise_symmetric(x_data, kernel_function, kernel_parameter)
+        kernel_sums[index] = kernel_matrix.sum()
         if classifier == "SVM" and kernel_function == polynomial_kernel and index >= 2:
             # Restrict polynomial kernel matrix for SVM.
             ratio = kernel_sums[index] / kernel_sums[1]

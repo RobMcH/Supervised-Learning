@@ -62,7 +62,7 @@ def kernelise_symmetric(x_i, kernel_function, kernel_parameter):
 def train_binary_kernel_perceptron(train_y, kernel_matrix, max_iterations=10):
     alphas = np.zeros(train_y.size, dtype=np.float64)
     best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size + 1, 1
-    mask = alphas != 0.0
+    mask = alphas != 0
     while True:
         error = 0
         for i in range(train_y.size):
@@ -139,7 +139,7 @@ def train_kernel_perceptron(train_y, kernel_matrix, max_iterations=10):
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
     best_alphas, error, last_error, epoch = np.copy(alphas), 0, train_y.size + 1, 1
-    mask = alphas != 0
+    mask = alphas[0] != 0
     while True:
         error = 0
         for i in range(train_y.size):
