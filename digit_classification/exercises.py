@@ -13,7 +13,7 @@ from plotter import plot_confusion_matrix, plot_images
 def setup(classifier):
     # Set up necessary variables for the tasks.
     x_data, y_data = read_data("data/zipcombo.dat")
-    train_perceptron = None
+    train_perceptron = train_ova_kernel_perceptron
     if classifier == "SVM":
         y_data = y_data.astype(np.float64)
     elif classifier == "OvA-Perceptron":
@@ -55,7 +55,7 @@ def cross_validate_classifiers(kfold_train_indices, kfold_test_indices, kernel_m
             test_kernel_matrix = kernel_matrix[kfold_train][:, kfold_test]
             if classifier == "SVM":
                 alphas, b = train_ova_svm(train_kernel_matrix, y_data[kfold_train], C)
-                test_error += evaluate_svm(alphas, b, y_data[kfold_train], y_data[kfold_train], test_kernel_matrix)
+                test_error += evaluate_svm(alphas, b, y_data[kfold_train], y_data[kfold_test], test_kernel_matrix)
             else:
                 alphas = train_perceptron(y_data[kfold_train], train_kernel_matrix)
                 test_error += kernel_perceptron_evaluate(y_data[kfold_test], test_kernel_matrix, alphas)
@@ -161,6 +161,7 @@ if __name__ == '__main__':
     # Kernel parameters for polynomial and Gaussian kernel.
     dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
+    errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier="SVM", C=1.0), dimensions)
     # Task 1.1
     for classifier in ["OvA-Perceptron", "Perceptron", "SVM"]:
         print(f"-------- {classifier} --------")
