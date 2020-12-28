@@ -44,6 +44,7 @@ def errors_to_latex_table(train_errors, test_errors, kernel_parameters):
 @numba.njit(parallel=True)
 def generate_absolute_confusion_matrix(predictions, y, num_classes):
     confusion_matrix = np.zeros((num_classes, num_classes), dtype=np.float64)
+    y = y.astype(np.int64)
     # Calculate absolute number of confusions.
     for i in range(predictions.shape[0]):
         if y[i] != predictions[i]:
