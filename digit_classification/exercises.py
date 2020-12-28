@@ -95,7 +95,7 @@ def cross_validate_mlp(x_data, y_data, epochs, kfold_train_indices, kfold_test_i
     return kfold_test_errors
 
 
-def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None, max_iterations=100):
+def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0, max_iterations=100):
     x_data, y_data, indices, train_perceptron = setup(classifier)
     train_errors = {i: [] for i, j in enumerate(kernel_parameters)}
     test_errors = {i: [] for i, j in enumerate(kernel_parameters)}
@@ -127,7 +127,7 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=None
     return train_errors_mean_std, test_errors_mean_std
 
 
-def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=None, max_iterations=100):
+def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0, max_iterations=100):
     x_data, y_data, indices, train_perceptron = setup(classifier)
     num_classes = np.unique(y_data).size
     kernel_str = "polynomial" if kernel_function == polynomial_kernel else "gaussian"

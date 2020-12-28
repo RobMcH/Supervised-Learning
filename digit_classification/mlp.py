@@ -248,4 +248,13 @@ def search_nn_architecture():
 
 
 if __name__ == '__main__':
-    search_nn_architecture()
+    x, y = read_data("data/zipcombo.dat")
+    indices = np.arange(0, y.size)
+    index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
+    layer_definition = [(16 * 16, 192), (192, 128), (128, 10)]
+    train, test = index_splits[10]
+    weights, metrics = train_mlp(x[train], y[train], 100, 0.1, layer_definition, return_metrics=True,
+                                 batching="Mini", batch_size=64, momentum=0.95, l2_reg=0.00001, print_metrics=False,
+                                 test_xs=x[test], test_ys=y[test])
+    print(metrics["test_err"].min())
+    print(metrics["test_loss"].min())
