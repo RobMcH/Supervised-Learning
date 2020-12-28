@@ -2,11 +2,17 @@ import numpy as np
 import numba
 import itertools
 import tqdm
+import copy
 from data import read_data, random_split_indices
 
 
+@numba.njit(parallel=True)
 def cross_entropy_loss(y, y_hat):
-    return np.sum(np.nan_to_num(-y * np.log(y_hat) - (1 - y) * np.log(1 - y_hat)))
+    loss = -y * np.log(y_hat) - (1 - y) * np.log(1 - y_hat)
+    for i in numba.prange(loss.shape[1]):
+        loss[np.isnan(loss[:, i]), i] = 0.0
+        loss[np.isinf(loss[:, i]), i] = np.finfo(loss.dtype).max
+    return np.sum(loss)
 
 
 @numba.njit()
@@ -55,39 +61,41 @@ def forward_pass(xs, weights, return_prediction=False, activation=sigma):
     Calculates one forward pass of the model. If return_predictions=True only the predictions of the model will be
     returned.
     """
-    forward_dict = {}
+    # First forward dict contains outputs, second forward dict contains outputs after feeding them through a logistic
+    # function.
+    forward_dicts = [{}, {}]
     prev_output = xs
     for i in range(len(weights)):
         weight, bias = weights[i]
-        forward_dict[f"h{i + 1}"] = predict(prev_output, weight, bias)
+        forward_dicts[0][i + 1] = predict(prev_output, weight, bias)
         if i == len(weights) - 1:
-            prev_output = forward_dict[f"h{i + 1}_sigma"] = np.array(
-                [softmax(forward_dict[f"h{i + 1}"][j]) for j in range(forward_dict[f"h{i + 1}"].shape[0])])
+            prev_output = forward_dicts[1][i + 1] = np.array(
+                [softmax(forward_dicts[0][i + 1][j]) for j in range(forward_dicts[0][i + 1].shape[0])])
         else:
-            prev_output = forward_dict[f"h{i + 1}_sigma"] = activation(forward_dict[f"h{i + 1}"])
+            prev_output = forward_dicts[1][i + 1] = activation(forward_dicts[0][i + 1])
     if return_prediction:
         return prev_output
-    return forward_dict
+    return forward_dicts
 
 
-def backward_pass(xs, ys, weights, forward_dict, activation_derivative=sigma_prime, l2_reg=0.0):
+def backward_pass(xs, ys, weights, forward_dicts, activation_derivative=sigma_prime, l2_reg=0.0):
     """
     Calculates one backward pass of the model.
     """
-    num_layers = len(forward_dict) // 2
+    num_layers = len(forward_dicts[0])
     gradients = []
-    y_hat = forward_dict[f"h{num_layers}_sigma"]
+    y_hat = forward_dicts[1][num_layers]
     ys = np.eye(y_hat.shape[1])[ys]
     # Delta for last layer.
     delta = (1.0 / ys.shape[0]) * (y_hat - ys)
     for i in range(num_layers - 1, -1, -1):
         # Loop through the layers and calculate the gradients for each weight/bias vector.
-        prev_output = forward_dict[f"h{i}_sigma"] if i >= 1 else xs
+        prev_output = forward_dicts[1][i] if i >= 1 else xs
         weight_gradient = prev_output.T @ delta + l2_reg * weights[i][0]
         bias_gradient = np.sum(delta, axis=0)
         gradients.append((weight_gradient, bias_gradient))
         if i != 0:
-            delta = (delta @ weights[i][0].T) * activation_derivative(forward_dict[f"h{i}"])
+            delta = (delta @ weights[i][0].T) * activation_derivative(forward_dicts[0][i])
     return gradients
 
 
@@ -124,6 +132,7 @@ def calculate_error_loss(xs, weights, true):
     return loss, error
 
 
+@numba.njit()
 def update_weights(weights, gradients, learning_rate, layer_count, momentum, prev_gradients):
     """
     Updates the weights of all of the layers for given gradients.
@@ -169,7 +178,7 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
     :return: weights [list], (metrics [dict])
     """
     weights = initialise_weights(layers)
-    best_weights, best_dev_acc = None, 0.0
+    best_weights, best_error = weights, 100.0
     y_hat_alias, layer_count = f"h{len(layers)}_sigma", len(layers)
     metrics = {"train_loss": np.zeros(epochs), "train_err": np.zeros(epochs), "test_loss": np.zeros(epochs),
                "test_err": np.zeros(epochs)}
@@ -213,6 +222,9 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
         train_loss, train_error = calculate_error_loss(xs, weights, ys)
         metrics["train_err"][epoch] = train_error
         metrics["train_loss"][epoch] = train_loss
+        if train_error < best_error:
+            best_weights = copy.deepcopy(weights)
+            best_error = train_error
         if test_xs is not None and test_ys is not None:
             test_loss, test_error = calculate_error_loss(test_xs, weights, test_ys)
             metrics["test_err"][epoch] = test_error
@@ -252,9 +264,15 @@ if __name__ == '__main__':
     indices = np.arange(0, y.size)
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
     layer_definition = [(16 * 16, 192), (192, 128), (128, 10)]
-    train, test = index_splits[10]
-    weights, metrics = train_mlp(x[train], y[train], 100, 0.1, layer_definition, return_metrics=True,
-                                 batching="Mini", batch_size=64, momentum=0.95, l2_reg=0.00001, print_metrics=False,
-                                 test_xs=x[test], test_ys=y[test])
-    print(metrics["test_err"].min())
-    print(metrics["test_loss"].min())
+    for l2 in [1e-5, 1e-4, 1e-3, 0.0]:
+        print(l2)
+        errors, losses = [], []
+        for i in tqdm.trange(20):
+            train, test = index_splits[i]
+            weights, metrics = train_mlp(x[train], y[train], 100, 0.1, layer_definition, return_metrics=True,
+                                         batching="Mini", batch_size=64, momentum=0.95, l2_reg=l2, print_metrics=False,
+                                         test_xs=x[test], test_ys=y[test])
+            errors.append(metrics["test_err"].min())
+            losses.append(metrics["test_loss"].min())
+        print(np.average(errors))
+        print(np.average(losses))
