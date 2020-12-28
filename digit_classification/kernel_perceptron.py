@@ -83,12 +83,13 @@ def train_binary_kernel_perceptron(train_y, kernel_matrix, max_iterations=100):
 
 
 @numba.njit(parallel=True, nogil=True)
-def train_ova_kernel_perceptron(train_y, kernel_matrix):
+def train_ova_kernel_perceptron(train_y, kernel_matrix, max_iterations):
     # Initialise weights to matrix of zeros, initialise other variables.
     num_classes = np.unique(train_y).size
     alphas = np.zeros((num_classes, train_y.size), dtype=np.float64)
     for classifier in numba.prange(num_classes):
-        alphas[classifier] = train_binary_kernel_perceptron(np.where(train_y == classifier, 1.0, -1.0), kernel_matrix)
+        alphas[classifier] = train_binary_kernel_perceptron(np.where(train_y == classifier, 1.0, -1.0), kernel_matrix,
+                                                            max_iterations)
     return alphas
 
 

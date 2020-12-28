@@ -177,13 +177,13 @@ def setup_ys(train_y, num_classes):
 
 
 @numba.njit(parallel=True)
-def train_ova_svm(kernel_matrix, train_y, C):
+def train_ova_svm(kernel_matrix, train_y, C, max_iterations):
     num_classes = np.unique(train_y).size
     alpha_w, b_w = np.zeros((num_classes, kernel_matrix.shape[0])), np.zeros(num_classes)
     ys = setup_ys(train_y, num_classes)
     # Train num_classes binary SVMs.
     for i in numba.prange(num_classes):
-        alpha, b = train_svm(kernel_matrix, ys[i], C)
+        alpha, b = train_svm(kernel_matrix, ys[i], C, max_iterations=max_iterations)
         alpha_w[i] = alpha
         b_w[i] = b
     return alpha_w, b_w

@@ -6,7 +6,7 @@ import numpy as np
 def plot_confusion_matrix(mean_matrix, std_matrix, num_classes, fn):
     labels = []
     for i in range(mean_matrix.shape[0]):
-        labels.extend([f"{mean_matrix[i][j]} ± {std_matrix[i][j]}" for j in range(mean_matrix.shape[1])])
+        labels.extend([f"{mean_matrix[i][j]}\n ± {std_matrix[i][j]}" for j in range(mean_matrix.shape[1])])
     labels = np.array(labels).reshape(mean_matrix.shape)
     ticklabels = [i for i in range(num_classes)]
     plt.figure(figsize=(16, 16), dpi=300)
