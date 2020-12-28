@@ -115,7 +115,7 @@ def analytical_gradients(xs, ys, weights, activation=sigma, activation_derivativ
 
 def calculate_error_loss(xs, weights, true):
     """
-    Calculate the accuracy as well as the loss for a given dataset (xs, true) and weights.
+    Calculate the error as well as the loss for a given dataset (xs, true) and weights.
     """
     predictions = forward_pass(xs, weights, return_prediction=True)
     ys = np.eye(predictions.shape[1])[true]

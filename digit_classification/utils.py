@@ -38,7 +38,7 @@ def errors_to_latex_table(train_errors, test_errors, kernel_parameters):
     # Print a latex table based on the given kernel parameters, train errors, and test errors.
     for i, k in enumerate(kernel_parameters):
         (train_error, train_std), (test_error, test_std) = train_errors[i], test_errors[i]
-        print(f"\t{k} & ${train_error} \\pm {train_std}$ & ${test_error} \\pm {test_std}$ \\\\")
+        print(f"\t{k} & ${train_error} \\pm {train_std}$ & ${test_error} \\pm {test_std}$ \\\\", flush=True)
 
 
 @numba.njit(parallel=True)
@@ -67,7 +67,7 @@ def matrices_to_latex_table(mean_matrix, std_matrix):
     for i in range(mean_matrix.shape[0]):
         row_string = [f"${mean_matrix[i][j]} \\pm {std_matrix[i][j]}$" for j in range(mean_matrix.shape[1])]
         row_string = " & ".join(row_string)
-        print("\t", row_string, "\\\\")
+        print("\t", row_string, "\\\\", flush=True)
 
 
 @numba.njit(parallel=True)
