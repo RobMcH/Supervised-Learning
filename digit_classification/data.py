@@ -25,3 +25,8 @@ def random_split_indices(indices, training_proportion):
     split_index = int(ind.shape[0] * training_proportion)
     rng.shuffle(ind)
     return ind[:split_index], ind[split_index:]
+
+
+def reset_rng(seed=42):
+    global rng
+    rng = np.random.default_rng(seed)

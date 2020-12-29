@@ -6,7 +6,7 @@ from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, trai
     kernel_perceptron_evaluate, polynomial_kernel, gaussian_kernel, kernel_perceptron_predict
 from support_vector_machine import train_ova_svm, evaluate_svm, ova_predict
 from mlp import train_mlp, calculate_error_loss, forward_pass
-from data import read_data, random_split_indices
+from data import read_data, random_split_indices, reset_rng
 from utils import KFold, generate_absolute_confusion_matrix, merge_confusion_matrices, \
     errors_to_latex_table
 from plotter import plot_confusion_matrix, plot_images
@@ -101,6 +101,7 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0,
     test_errors = {i: [] for i, j in enumerate(kernel_parameters)}
     # Generate train/test splits by generating 20 index pairs.
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
+    reset_rng()
     kernel_sums = np.zeros(len(kernel_parameters))
 
     for index, kernel_parameter in enumerate(tqdm(kernel_parameters)):
@@ -135,6 +136,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0,
     test_errors, parameters, confusion_matrices, matrices, error_vectors = [], [], [], [], []
     # Generate train/test splits by generating 20 index pairs.
     index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
+    reset_rng()
     kernel_sums = np.zeros(len(kernel_parameters))
     test_index_counts = np.bincount(np.array([index_splits[i][1] for i in range(20)]).reshape(-1),
                                     minlength=indices.size)
