@@ -224,12 +224,6 @@ if __name__ == '__main__':
     l2_vals = [0.0, 1e-3, 1e-4]
 
     # Task 1.1 OvA perceptron and multiclass perceptron.
-    # MLP.
-    for max_iterations, l2 in product(iterations, l2_vals):
-        print(f"-------- MLP -------- {max_iterations} -------- {l2} --------")
-        errors_to_latex_table(
-            *task_1_1(polynomial_kernel, layer_definitions, classifier="MLP", max_iterations=max_iterations, l2=l2),
-            num_layers)
     for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
         print(f"-------- {classifier} -------- {max_iterations} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier,
@@ -241,6 +235,11 @@ if __name__ == '__main__':
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier="SVM", C=C,
                                         max_iterations=max_iterations), dimensions)
         errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=C, max_iterations=max_iterations), cs)
+    # MLP.
+    for max_iterations, l2 in product(iterations, l2_vals):
+        print(f"-------- MLP -------- {max_iterations} -------- {l2} --------")
+        errors_to_latex_table(*task_1_1(polynomial_kernel, layer_definitions, classifier="MLP",
+                                        max_iterations=max_iterations, l2=l2), num_layers)
     # Task 1.2 and 1.3. OvA perceptron and multiclass perceptron.
     for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
         print(f"-------- {classifier} -------- {max_iterations} --------")
