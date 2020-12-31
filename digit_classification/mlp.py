@@ -6,6 +6,9 @@ import copy
 from data import read_data, random_split_indices
 
 
+np.random.seed(42)
+
+
 @numba.njit(parallel=True)
 def cross_entropy_loss(y, y_hat):
     loss = -y * np.log(y_hat) - (1 - y) * np.log(1 - y_hat)
@@ -56,6 +59,14 @@ def predict(x_, w_, b_):
     return x_ @ w_ + b_
 
 
+def l1_prime(weight):
+    return np.where(weight >= 0, 1.0, -1.0)
+
+
+def l2_prime(weight):
+    return 2 * weight
+
+
 def forward_pass(xs, weights, return_prediction=False, activation=sigma):
     """
     Calculates one forward pass of the model. If return_predictions=True only the predictions of the model will be
@@ -78,7 +89,7 @@ def forward_pass(xs, weights, return_prediction=False, activation=sigma):
     return forward_dicts
 
 
-def backward_pass(xs, ys, weights, forward_dicts, activation_derivative=sigma_prime, l2_reg=0.0):
+def backward_pass(xs, ys, weights, forward_dicts, activation_derivative=sigma_prime, l1_reg=0.0, l2_reg=0.0):
     """
     Calculates one backward pass of the model.
     """
@@ -91,7 +102,7 @@ def backward_pass(xs, ys, weights, forward_dicts, activation_derivative=sigma_pr
     for i in range(num_layers - 1, -1, -1):
         # Loop through the layers and calculate the gradients for each weight/bias vector.
         prev_output = forward_dicts[1][i] if i >= 1 else xs
-        weight_gradient = prev_output.T @ delta + l2_reg * weights[i][0]
+        weight_gradient = prev_output.T @ delta + l1_reg * l1_prime(weights[i][0]) + l2_reg * l2_prime(weights[i][0])
         bias_gradient = np.sum(delta, axis=0)
         gradients.append((weight_gradient, bias_gradient))
         if i != 0:
@@ -112,12 +123,13 @@ def initialise_weights(layers):
     return weights
 
 
-def analytical_gradients(xs, ys, weights, activation=sigma, activation_derivative=sigma_prime, l2_reg=0.0):
+def analytical_gradients(xs, ys, weights, activation=sigma, activation_derivative=sigma_prime, l1_reg=0.0, l2_reg=0.0):
     """
     Calculate the analytical gradients of the model.
     """
     forward_dict = forward_pass(xs, weights, activation=activation)
-    gradients = backward_pass(xs, ys, weights, forward_dict, activation_derivative=activation_derivative, l2_reg=l2_reg)
+    gradients = backward_pass(xs, ys, weights, forward_dict, activation_derivative=activation_derivative, l1_reg=l1_reg,
+                              l2_reg=l2_reg)
     return gradients, forward_dict
 
 
@@ -132,7 +144,6 @@ def calculate_error_loss(xs, weights, true):
     return loss, error
 
 
-@numba.njit()
 def update_weights(weights, gradients, learning_rate, layer_count, momentum, prev_gradients):
     """
     Updates the weights of all of the layers for given gradients.
@@ -155,7 +166,7 @@ def update_weights(weights, gradients, learning_rate, layer_count, momentum, pre
 
 
 def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, batching="Full", batch_size=0,
-              momentum=0.0, l2_reg=0.0, return_metrics=False, return_best_weights=False, print_metrics=True,
+              momentum=0.0, l1_reg=0.0, l2_reg=0.0, return_metrics=False, return_best_weights=False, print_metrics=True,
               test_xs=None, test_ys=None):
     """
     Trains a multi-layer perceptron. The training is performed by gradient descent and backpropagation. The training
@@ -186,7 +197,7 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
     # Reverse order of initial prev_gradients (based on weight shapes) as the gradients start from the last layer.
     prev_gradients.reverse()
     # RNG
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(42)
     # Split the training data into full/mini/SGD batches.
     if batching != "Full":
         if batching == "Mini" and batch_size > 0:
@@ -210,7 +221,8 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
                 rng.shuffle(y_batches)
             for i in range(len(x_batches)):
                 # Train on mini-batches. prev_gradients is only used if momentum > 0.0.
-                gradients, forward_dict = analytical_gradients(x_batches[i], y_batches[i], weights, l2_reg=l2_reg)
+                gradients, forward_dict = analytical_gradients(x_batches[i], y_batches[i], weights, l1_reg=l1_reg,
+                                                               l2_reg=l2_reg)
                 weights = optimizer(weights, gradients, learning_rate, layer_count, momentum, prev_gradients)
                 prev_gradients = gradients
         else:
