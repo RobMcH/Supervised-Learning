@@ -44,14 +44,14 @@ def evaluate_classifiers(index_splits, kernel_matrix, train_perceptron, classifi
     return train_errors, test_errors
 
 
-def evaluate_mlp(x_data, y_data, layer_definition, index_splits, epochs, l2):
+def evaluate_mlp(x_data, y_data, layer_definition, index_splits, epochs, l1, l2):
     train_errors, test_errors = np.zeros(len(index_splits)), np.zeros(len(index_splits))
     for i in range(len(index_splits)):
         train_indices, test_indices = index_splits[i]
         x_train, y_train = x_data[train_indices], y_data[train_indices]
         x_test, y_test = x_data[test_indices], y_data[test_indices]
-        weights = train_mlp(x_train, y_train, epochs, 0.1, layer_definition, batching="Mini", batch_size=64, l2_reg=l2,
-                            momentum=0.95, return_best_weights=True, print_metrics=False)
+        weights = train_mlp(x_train, y_train, epochs, 0.1, layer_definition, batching="Mini", batch_size=64, l1_reg=l1,
+                            l2_reg=l2, momentum=0.95, return_best_weights=True, print_metrics=False)
         train_loss, train_error = calculate_error_loss(x_train, weights, y_train)
         test_loss, test_error = calculate_error_loss(x_test, weights, y_test)
         train_errors[i] = train_error
@@ -80,7 +80,7 @@ def cross_validate_classifiers(kfold_train_indices, kfold_test_indices, kernel_m
     return kfold_test_errors
 
 
-def cross_validate_mlp(x_data, y_data, layer_definition, epochs, kfold_train_indices, kfold_test_indices, l2):
+def cross_validate_mlp(x_data, y_data, layer_definition, epochs, kfold_train_indices, kfold_test_indices, l1, l2):
     kfold_test_errors = np.zeros(20)
     for i in range(20):
         test_error = 0.0
@@ -89,13 +89,13 @@ def cross_validate_mlp(x_data, y_data, layer_definition, epochs, kfold_train_ind
             train_x, train_y = x_data[kfold_train], y_data[kfold_train]
             test_x, test_y = x_data[kfold_test], y_data[kfold_test]
             weights = train_mlp(train_x, train_y, epochs, 0.1, layer_definition, batching="Mini", batch_size=64,
-                                momentum=0.95, l2_reg=l2, return_best_weights=True, print_metrics=False)
+                                momentum=0.95, l1_reg=l1, l2_reg=l2, return_best_weights=True, print_metrics=False)
             test_error += calculate_error_loss(test_x, weights, test_y)
         kfold_test_errors[i] = test_error / 5.0
     return kfold_test_errors
 
 
-def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0, max_iterations=100, l2=0.0):
+def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0, max_iterations=100, l1=0.0, l2=0.0):
     x_data, y_data, indices, train_perceptron = setup(classifier)
     train_errors = {i: [] for i, j in enumerate(kernel_parameters)}
     test_errors = {i: [] for i, j in enumerate(kernel_parameters)}
@@ -119,7 +119,7 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0,
                                                                            max_iterations)
         elif classifier == "MLP":
             train_errors[index], test_errors[index] = evaluate_mlp(x_data, y_data, kernel_parameter, index_splits,
-                                                                   max_iterations, l2)
+                                                                   max_iterations, l1, l2)
 
     # Analyse results.
     train_errors_mean_std = [(np.around(np.average(errors), 3), np.around(np.std(errors), 3)) for errors in
@@ -129,7 +129,7 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0,
     return train_errors_mean_std, test_errors_mean_std
 
 
-def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0, max_iterations=100, l2=0.0):
+def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0, max_iterations=100, l1=0.0, l2=0.0):
     x_data, y_data, indices, train_perceptron = setup(classifier)
     num_classes = np.unique(y_data).size
     kernel_str = "polynomial" if kernel_function == polynomial_kernel else "gaussian"
@@ -160,7 +160,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0,
                                                                   max_iterations)
         elif classifier == "MLP":
             kfold_test_errors[index] = cross_validate_mlp(x_data, y_data, kernel_parameter, max_iterations, kfold_train,
-                                                          kfold_test, l2)
+                                                          kfold_test, l1, l2)
 
     best_param_indices = np.argmin(kfold_test_errors, axis=0)
     for epoch_index, param_index in enumerate(best_param_indices):
@@ -183,8 +183,8 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0,
         elif classifier == "MLP":
             layer_definition = kernel_parameters[param_index]
             best_weights = train_mlp(x_data[train_indices], y_data[train_indices], max_iterations, 0.1,
-                                     layer_definition, batching="Mini", batch_size=64, momentum=0.95, l2_reg=l2,
-                                     return_best_weights=True, print_metrics=False)
+                                     layer_definition, batching="Mini", batch_size=64, momentum=0.95, l1_reg=l1,
+                                     l2_reg=l2, return_best_weights=True, print_metrics=False)
             test_loss, test_error = calculate_error_loss(x_data[test_indices], best_weights, y_data[test_indices])
             predictions = forward_pass(x_data[test_indices], best_weights, return_prediction=True).argmax(axis=1)
         # Calculate test error, and save it and the corresponding parameter value.
@@ -221,8 +221,15 @@ if __name__ == '__main__':
     # MLP layer definitions.
     layer_definitions = [[(16 * 16, 10)], [(16 * 16, 192), (192, 10)], [(16 * 16, 192), (192, 128), (128, 10)]]
     num_layers = [len(layer) for layer in layer_definitions]
-    l2_vals = [0.0, 1e-3, 1e-4]
+    l_vals = [0.0, 1e-3, 1e-4]
 
+    # MLP.
+    for max_iterations, l in product(iterations, l_vals):
+        print(f"-------- MLP -------- {max_iterations} -------- {l} --------")
+        errors_to_latex_table(*task_1_1(polynomial_kernel, layer_definitions, classifier="MLP",
+                                        max_iterations=max_iterations, l1=l), num_layers)
+        errors_to_latex_table(*task_1_1(polynomial_kernel, layer_definitions, classifier="MLP",
+                                        max_iterations=max_iterations, l2=l), num_layers)
     # Task 1.1 OvA perceptron and multiclass perceptron.
     for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
         print(f"-------- {classifier} -------- {max_iterations} --------")
@@ -235,11 +242,7 @@ if __name__ == '__main__':
         errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier="SVM", C=C,
                                         max_iterations=max_iterations), dimensions)
         errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=C, max_iterations=max_iterations), cs)
-    # MLP.
-    for max_iterations, l2 in product(iterations, l2_vals):
-        print(f"-------- MLP -------- {max_iterations} -------- {l2} --------")
-        errors_to_latex_table(*task_1_1(polynomial_kernel, layer_definitions, classifier="MLP",
-                                        max_iterations=max_iterations, l2=l2), num_layers)
+
     # Task 1.2 and 1.3. OvA perceptron and multiclass perceptron.
     for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
         print(f"-------- {classifier} -------- {max_iterations} --------")

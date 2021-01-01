@@ -9,6 +9,10 @@ from data import read_data, random_split_indices
 np.random.seed(42)
 
 
+def reset_seed(seed=42):
+    np.random.seed(seed)
+
+
 @numba.njit(parallel=True)
 def cross_entropy_loss(y, y_hat):
     loss = -y * np.log(y_hat) - (1 - y) * np.log(1 - y_hat)
@@ -245,30 +249,12 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
                 print(
                     f"Epoch {epoch} - Training loss {train_loss} - Training error {train_error} - Test loss {test_loss}"
                     f" - Test error {test_error}")
+    reset_seed()
     if return_best_weights:
         weights = best_weights
     if return_metrics:
         return weights, metrics
     return weights
-
-
-def search_nn_architecture():
-    x, y = read_data("data/zipcombo.dat")
-    indices = np.arange(0, y.size)
-    index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
-    batch_sizes = [16, 32, 64]
-    momentum = [0.0, 0.9]
-    layer_definition = [(16 * 16, 192), (192, 128), (128, 10)]
-    for b, m in itertools.product(batch_sizes, momentum):
-        errors, losses = [], []
-        for i in tqdm.trange(20):
-            train, test = index_splits[i]
-            weights, metrics = train_mlp(x[train], y[train], 100, 0.1, layer_definition, return_metrics=True,
-                                         batching="Mini", batch_size=b, momentum=m, l2_reg=0.0, print_metrics=False,
-                                         test_xs=x[test], test_ys=y[test])
-            errors.append(metrics["test_err"].min())
-            losses.append(metrics["test_loss"].min())
-        print(f" batch size: {b} - momentum: {m} - avg. error {np.average(errors)} - avg. loss {np.average(losses)}")
 
 
 if __name__ == '__main__':

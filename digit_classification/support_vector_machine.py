@@ -6,6 +6,11 @@ np.random.seed(42)
 
 
 @numba.njit()
+def reset_seed(seed=42):
+    np.random.seed(seed)
+
+
+@numba.njit()
 def calculate_line_bounds(y_1, y_2, alpha_1, alpha_2, C):
     # Calculate the bounds of the line segment.
     if y_1 != y_2:
@@ -186,6 +191,7 @@ def train_ova_svm(kernel_matrix, train_y, C, max_iterations):
         alpha, b = train_svm(kernel_matrix, ys[i], C, max_iterations=max_iterations)
         alpha_w[i] = alpha
         b_w[i] = b
+    reset_seed()
     return alpha_w, b_w
 
 
