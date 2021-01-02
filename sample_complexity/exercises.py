@@ -23,8 +23,8 @@ def evaluate_1nn():
         distances = calculate_initial_distances(dev_x, train_x)
         last_m, nn_changes_temp, nn_errors_temp = 1, np.zeros_like(nn_changes), np.zeros_like(nn_errors)
         for n in tqdm(range(1, n_max + 1)):
-            # The maximum test set size is 1**16 because of memory constraints.
-            dev_size = np.minimum(2**n, 2**16)
+            # The maximum test set size is 2**16 because of memory constraints.
+            dev_size = int(np.minimum(2**n, 2**16))
             current_dev_x, current_dev_y = dev_x[:dev_size, :n], dev_y[:dev_size]
             # Count how many times the 1-nn classifier gets <= 10.0 test error in a row.
             nn_count = 0

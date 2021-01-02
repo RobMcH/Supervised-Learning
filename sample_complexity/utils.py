@@ -19,3 +19,7 @@ def logarithmic(x):
 
 def exponential(x):
     return np.exp(x)
+
+
+def exponential_2(x):
+    return np.exp2(x)
