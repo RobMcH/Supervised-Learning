@@ -5,23 +5,22 @@ from least_squares import evaluate_linear_regression, fit_linear_regression_unde
 from winnow import winnow_fit, winnow_evaluate
 from nearest_neighbours import nearest_neighbours_evaluate, calculate_initial_distances, update_distances,\
     find_initial_nearest_neighbour, find_nearest_neighbour
-from data import generate_data
+from data import generate_data, generate_full_space
 from plotter import plot_sample_complexity
 
 
 def evaluate_1nn():
-    n_max, m_max, num_runs = 26, 100000, 50
+    n_max, m_max, num_runs = 25, 100000, 50
     nn_errors = np.zeros((n_max, m_max))
     # Matrix to indicate where NN makes 0 errors (as opposed to just skipping a particular (m, n) pair).
     nn_changes = np.zeros_like(nn_errors)
-
     for i in tqdm(range(1, num_runs + 1)):
         # Generate training and testing data for each run.
         train_x, train_y = generate_data(m_max, n_max)
         dev_x, dev_y = generate_data(2**16, n_max)
         # Calculate the distance matrix for each training and test point for n = 1 (implicitly).
         distances = calculate_initial_distances(dev_x, train_x)
-        last_m, nn_changes_temp, nn_errors_temp = 1, np.zeros_like(nn_changes), np.zeros_like(nn_errors)
+        nn_changes_temp, nn_errors_temp = np.zeros_like(nn_changes), np.zeros_like(nn_errors)
         error_check_indicator = False
         for n in tqdm(range(1, n_max + 1)):
             # The maximum test set size is 2**16 because of memory constraints.
@@ -35,9 +34,6 @@ def evaluate_1nn():
                 update_distances(dev_x[:, :n], train_x[:, :n], distances)
             for m in range(1, m_max + 1):
                 current_x, current_y = train_x[:m, :n], train_y[:m]
-                if m < last_m:
-                    # Skip values of m that resulted in more than 10.0% test error for the previous n.
-                    continue
                 if nn_count >= 3:
                     break
                 # Evaluate 1-nn. Only compute 1-nn for the current value of n if any value of m resulted in <= 10.0
@@ -48,7 +44,7 @@ def evaluate_1nn():
                     if not ((nn_errors_temp[n - 2][mask] <= 10.0).any() or mask.size):
                         break
                     error_check_indicator = True
-                if m == last_m:
+                if m == 1:
                     # Initial call to find the nearest neighbours.
                     min, argmin = find_initial_nearest_neighbour(distances, m, dev_size)
                 else:
@@ -60,9 +56,6 @@ def evaluate_1nn():
                 nn_errors_temp[n - 1, m - 1] += nn_error
                 nn_changes_temp[n - 1, m - 1] += 1
                 if nn_error <= 10.0:
-                    # Save first value of m that resulted in less than 10% test error for the current n.
-                    if nn_count == 0:
-                        last_m = m
                     nn_count += 1
                 else:
                     nn_count = 0

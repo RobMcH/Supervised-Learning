@@ -222,7 +222,7 @@ if __name__ == '__main__':
     layer_definitions = [[(16 * 16, 10)], [(16 * 16, 192), (192, 10)], [(16 * 16, 192), (192, 128), (128, 10)],
                          [(16 * 16, 192), (192, 128), (128, 96), (96, 10)]]
     num_layers = [len(layer) for layer in layer_definitions]
-    l_vals = [0.0, 1e-3, 1e-4]
+    l_vals = [1e-5]
 
     # MLP.
     for max_iterations, l in product(iterations, l_vals):
