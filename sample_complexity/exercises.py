@@ -60,6 +60,7 @@ def evaluate_1nn():
                         nn_count += 1
                     else:
                         nn_count = 0
+            print(f"{n}: {last_m}")
         # Update global error and change matrices.
         nn_changes += nn_changes_temp
         nn_errors += nn_errors_temp

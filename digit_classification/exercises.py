@@ -219,7 +219,8 @@ if __name__ == '__main__':
     svm_cs = [0.001, 1.0, 10000.0]
     iterations = [10, 25, 100, 250]
     # MLP layer definitions.
-    layer_definitions = [[(16 * 16, 10)], [(16 * 16, 192), (192, 10)], [(16 * 16, 192), (192, 128), (128, 10)]]
+    layer_definitions = [[(16 * 16, 10)], [(16 * 16, 192), (192, 10)], [(16 * 16, 192), (192, 128), (128, 10)],
+                         [(16 * 16, 192), (192, 128), (128, 96), (96, 10)]]
     num_layers = [len(layer) for layer in layer_definitions]
     l_vals = [0.0, 1e-3, 1e-4]
 
@@ -228,8 +229,9 @@ if __name__ == '__main__':
         print(f"-------- MLP -------- {max_iterations} -------- {l} --------")
         errors_to_latex_table(*task_1_1(polynomial_kernel, layer_definitions, classifier="MLP",
                                         max_iterations=max_iterations, l1=l), num_layers)
-        errors_to_latex_table(*task_1_1(polynomial_kernel, layer_definitions, classifier="MLP",
-                                        max_iterations=max_iterations, l2=l), num_layers)
+        if l != 0.0:
+            errors_to_latex_table(*task_1_1(polynomial_kernel, layer_definitions, classifier="MLP",
+                                            max_iterations=max_iterations, l2=l), num_layers)
     # Task 1.1 OvA perceptron and multiclass perceptron.
     for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
         print(f"-------- {classifier} -------- {max_iterations} --------")
