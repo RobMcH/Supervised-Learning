@@ -66,10 +66,12 @@ def evaluate_1nn():
                     nn_count += 1
                 else:
                     nn_count = 0
-            print(f"{n}: {last_m}")
         # Update global error and change matrices.
         nn_changes += nn_changes_temp
         nn_errors += nn_errors_temp
+        nn_errors_ = np.logical_and(nn_errors / nn_changes <= 10.0, nn_changes)
+        min_samples = np.argmax(nn_errors_, axis=1)
+        print(nn_errors_)
     # Calculate the lowest values of m that resulted in a test error of <= 10.0 on average.
     x_vals = np.arange(1, 101)
     nn_errors = np.logical_and(nn_errors / nn_changes <= 10.0, nn_changes)
