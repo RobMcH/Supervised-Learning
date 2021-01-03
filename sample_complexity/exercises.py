@@ -22,6 +22,7 @@ def evaluate_1nn():
         # Calculate the distance matrix for each training and test point for n = 1 (implicitly).
         distances = calculate_initial_distances(dev_x, train_x)
         last_m, nn_changes_temp, nn_errors_temp = 1, np.zeros_like(nn_changes), np.zeros_like(nn_errors)
+        error_check_indicator = False
         for n in tqdm(range(1, n_max + 1)):
             # The maximum test set size is 2**16 because of memory constraints.
             dev_size = int(np.minimum(2**n, 2**16))
@@ -41,26 +42,30 @@ def evaluate_1nn():
                     break
                 # Evaluate 1-nn. Only compute 1-nn for the current value of n if any value of m resulted in <= 10.0
                 # generalisation error for the previous n.
-                mask = np.where(nn_changes_temp[n - 2])[0]
-                if n < 2 or (mask.size and (nn_errors_temp[n - 2][mask] <= 10.0).any()):
-                    if m == last_m:
-                        # Initial call to find the nearest neighbours.
-                        min, argmin = find_initial_nearest_neighbour(distances, m, dev_size)
-                    else:
-                        # Compare the distances in the m-th row of the matrix with the previously found ones. This can
-                        # be thought of as iteratively feeding in more data and finding the minimum of it.
-                        min, argmin = find_nearest_neighbour(distances, m, dev_size, min, argmin)
-                    # Calculate the error, update the local error and change matrices.
-                    nn_error = nearest_neighbours_evaluate(argmin, current_y, current_dev_y)
-                    nn_errors_temp[n - 1, m - 1] += nn_error
-                    nn_changes_temp[n - 1, m - 1] += 1
-                    if nn_error <= 10.0:
-                        # Save first value of m that resulted in less than 10% test error for the current n.
-                        if nn_count == 0:
-                            last_m = m
-                        nn_count += 1
-                    else:
-                        nn_count = 0
+
+                if n > 2 and not error_check_indicator:
+                    mask = np.where(nn_changes_temp[n - 2])[0]
+                    if not ((nn_errors_temp[n - 2][mask] <= 10.0).any() or mask.size):
+                        break
+                    error_check_indicator = True
+                if m == last_m:
+                    # Initial call to find the nearest neighbours.
+                    min, argmin = find_initial_nearest_neighbour(distances, m, dev_size)
+                else:
+                    # Compare the distances in the m-th row of the matrix with the previously found ones. This can
+                    # be thought of as iteratively feeding in more data and finding the minimum of it.
+                    min, argmin = find_nearest_neighbour(distances, m, dev_size, min, argmin)
+                # Calculate the error, update the local error and change matrices.
+                nn_error = nearest_neighbours_evaluate(argmin, current_y, current_dev_y)
+                nn_errors_temp[n - 1, m - 1] += nn_error
+                nn_changes_temp[n - 1, m - 1] += 1
+                if nn_error <= 10.0:
+                    # Save first value of m that resulted in less than 10% test error for the current n.
+                    if nn_count == 0:
+                        last_m = m
+                    nn_count += 1
+                else:
+                    nn_count = 0
             print(f"{n}: {last_m}")
         # Update global error and change matrices.
         nn_changes += nn_changes_temp
