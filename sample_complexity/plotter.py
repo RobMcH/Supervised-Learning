@@ -4,7 +4,7 @@ from utils import logarithmic, linear, quadratic, cubic, exponential, exponentia
 plt.style.use(['science', 'no-latex'])
 
 
-def plot_sample_complexity(n, m, classifier, log=0, lin=0, quad=0, cube=0, exp=0, exp2=0):
+def plot_sample_complexity(n, m, classifier, log=0, lin=0, quad=0, cube=0, l_power=0, h_power=0):
     fig = plt.figure()
     plt.plot(n[m != -1], m[m != -1], label=classifier)
     if log:
@@ -15,10 +15,10 @@ def plot_sample_complexity(n, m, classifier, log=0, lin=0, quad=0, cube=0, exp=0
         plt.plot(n, quad * quadratic(n), label=f"{quad} · n²")
     if cube:
         plt.plot(n, cube * cubic(n), label=f"{cube} · n³")
-    if exp:
-        plt.plot(n, exp * exponential(n), label=f"{exp} · e^n")
-    if exp2:
-        plt.plot(n, exp2 * exponential_2(n), label=f"{exp2} · 2^n")
+    if l_power:
+        plt.plot(n, np.power(l_power, n), label=f"{l_power}^n")
+    if h_power:
+        plt.plot(n, np.power(h_power, n), label=f"{h_power}^n")
     plt.legend()
     plt.title(f"Sample complexity for {classifier}")
     plt.xlabel("Dimensionality (n)")
