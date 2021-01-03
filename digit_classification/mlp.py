@@ -1,9 +1,6 @@
 import numpy as np
 import numba
-import itertools
-import tqdm
 import copy
-from data import read_data, random_split_indices
 
 
 np.random.seed(42)
@@ -68,7 +65,7 @@ def l1_prime(weight):
 
 
 def l2_prime(weight):
-    return 2 * weight
+    return weight
 
 
 def forward_pass(xs, weights, return_prediction=False, activation=sigma):
@@ -200,7 +197,7 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
     prev_gradients = [(np.zeros_like(weight[0]), np.zeros_like(weight[1])) for weight in weights]
     # Reverse order of initial prev_gradients (based on weight shapes) as the gradients start from the last layer.
     prev_gradients.reverse()
-    # RNG
+    # RNG.
     rng = np.random.default_rng(42)
     # Split the training data into full/mini/SGD batches.
     if batching != "Full":
@@ -239,6 +236,7 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
         metrics["train_err"][epoch] = train_error
         metrics["train_loss"][epoch] = train_loss
         if train_error < best_error:
+            # Save best weights.
             best_weights = copy.deepcopy(weights)
             best_error = train_error
         if test_xs is not None and test_ys is not None:
@@ -255,22 +253,3 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
     if return_metrics:
         return weights, metrics
     return weights
-
-
-if __name__ == '__main__':
-    x, y = read_data("data/zipcombo.dat")
-    indices = np.arange(0, y.size)
-    index_splits = [random_split_indices(indices, 0.8) for i in range(20)]
-    layer_definition = [(16 * 16, 192), (192, 128), (128, 10)]
-    for l2 in [1e-5, 1e-4, 1e-3, 0.0]:
-        print(l2)
-        errors, losses = [], []
-        for i in tqdm.trange(20):
-            train, test = index_splits[i]
-            weights, metrics = train_mlp(x[train], y[train], 100, 0.1, layer_definition, return_metrics=True,
-                                         batching="Mini", batch_size=64, momentum=0.95, l2_reg=l2, print_metrics=False,
-                                         test_xs=x[test], test_ys=y[test])
-            errors.append(metrics["test_err"].min())
-            losses.append(metrics["test_loss"].min())
-        print(np.average(errors))
-        print(np.average(losses))
