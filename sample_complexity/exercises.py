@@ -10,7 +10,7 @@ from plotter import plot_sample_complexity
 
 
 def evaluate_1nn():
-    n_max, m_max, num_runs = 24, 6000, 50
+    n_max, m_max, num_runs = 24, 50000, 50
     nn_errors = np.zeros((n_max, m_max))
     # Matrix to indicate where NN makes 0 errors (as opposed to just skipping a particular (m, n) pair).
     nn_changes = np.zeros_like(nn_errors)
@@ -61,7 +61,8 @@ def evaluate_1nn():
     mask = np.any(nn_errors, axis=1)
     min_samples[mask] += 1
     min_samples[~mask] = -1
-    plot_sample_complexity(x_vals, min_samples, "1-nearest neighbour", cube=1, exp=1)
+    min_samples = np.concatenate([min_samples, np.zeros(x_vals.size - min_samples.size) - 1])
+    plot_sample_complexity(x_vals, min_samples, "1-nearest neighbour", h_power=2, l_power=1.5)
     print(min_samples)
 
 
