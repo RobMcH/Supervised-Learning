@@ -7,7 +7,7 @@ warnings.filterwarnings("ignore", category=numba.NumbaPerformanceWarning)
 @numba.njit(parallel=True)
 def calculate_initial_distances(test_x, train_x):
     # Calculates the L1 distance between every training and test point w.r.t. their first feature.
-    distances = np.zeros((train_x.shape[0], test_x.shape[0]))
+    distances = np.zeros((train_x.shape[0], test_x.shape[0]), dtype=np.int32)
     for i in numba.prange(train_x.shape[0]):
         point = train_x[i][0]
         distances[i] = np.abs(test_x[:, 0] - point)
