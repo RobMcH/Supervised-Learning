@@ -37,11 +37,12 @@ def evaluate_1nn():
                 if m < last_m:
                     # Skip values of m that resulted in more than 10.0% test error for the previous n.
                     continue
+                if nn_count >= 3:
+                    break
                 # Evaluate 1-nn. Only compute 1-nn for the current value of n if any value of m resulted in <= 10.0
                 # generalisation error for the previous n.
                 mask = np.where(nn_changes_temp[n - 2])[0]
-                if (n < 2 and nn_count < 3) or (
-                        nn_count < 3 and mask.size and (nn_errors_temp[n - 2][mask] <= 10.0).any()):
+                if n < 2 or (mask.size and (nn_errors_temp[n - 2][mask] <= 10.0).any()):
                     if m == last_m:
                         # Initial call to find the nearest neighbours.
                         min, argmin = find_initial_nearest_neighbour(distances, m, dev_size)
