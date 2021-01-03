@@ -10,7 +10,7 @@ from plotter import plot_sample_complexity
 
 
 def evaluate_1nn():
-    n_max, m_max, num_runs = 100, 150000, 50
+    n_max, m_max, num_runs = 26, 100000, 50
     nn_errors = np.zeros((n_max, m_max))
     # Matrix to indicate where NN makes 0 errors (as opposed to just skipping a particular (m, n) pair).
     nn_changes = np.zeros_like(nn_errors)
@@ -66,12 +66,14 @@ def evaluate_1nn():
                     nn_count += 1
                 else:
                     nn_count = 0
-            print(f"{n}: {last_m}")
         # Update global error and change matrices.
         nn_changes += nn_changes_temp
         nn_errors += nn_errors_temp
+        nn_errors_ = np.logical_and(nn_errors / nn_changes <= 10.0, nn_changes)
+        min_samples = np.argmax(nn_errors_, axis=1)
+        print(nn_errors_)
     # Calculate the lowest values of m that resulted in a test error of <= 10.0 on average.
-    x_vals = np.arange(1, n_max + 1)
+    x_vals = np.arange(1, 101)
     nn_errors = np.logical_and(nn_errors / nn_changes <= 10.0, nn_changes)
     min_samples = np.argmax(nn_errors, axis=1)
     mask = np.any(nn_errors, axis=1)
