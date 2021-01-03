@@ -10,7 +10,7 @@ from plotter import plot_sample_complexity
 
 
 def evaluate_1nn():
-    n_max, m_max, num_runs = 25, 100000, 50
+    n_max, m_max, num_runs = 24, 6000, 50
     nn_errors = np.zeros((n_max, m_max))
     # Matrix to indicate where NN makes 0 errors (as opposed to just skipping a particular (m, n) pair).
     nn_changes = np.zeros_like(nn_errors)
@@ -27,23 +27,12 @@ def evaluate_1nn():
             dev_size = int(np.minimum(2**n, 2**16))
             current_dev_x, current_dev_y = dev_x[:dev_size, :n], dev_y[:dev_size]
             # Count how many times the 1-nn classifier gets <= 10.0 test error in a row.
-            nn_count = 0
             if n > 1:
                 # Update the distance matrix iteratively. Each time update distances is called the (n - 1)-th feature
                 # is used to update the distance matrix. This results in huge speedups.
                 update_distances(dev_x[:, :n], train_x[:, :n], distances)
             for m in range(1, m_max + 1):
                 current_x, current_y = train_x[:m, :n], train_y[:m]
-                if nn_count >= 3:
-                    break
-                # Evaluate 1-nn. Only compute 1-nn for the current value of n if any value of m resulted in <= 10.0
-                # generalisation error for the previous n.
-
-                if n > 2 and not error_check_indicator:
-                    mask = np.where(nn_changes_temp[n - 2])[0]
-                    if not ((nn_errors_temp[n - 2][mask] <= 10.0).any() or mask.size):
-                        break
-                    error_check_indicator = True
                 if m == 1:
                     # Initial call to find the nearest neighbours.
                     min, argmin = find_initial_nearest_neighbour(distances, m, dev_size)
