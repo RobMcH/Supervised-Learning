@@ -298,7 +298,7 @@ def measure_time_complexity(iterations, layer_specifications):
             for key_, value_ in value.items():
                 if type(value_) == list and len(value_) > 0 and type(value_[0]) == list:
                     for i in range(len(value_)):
-                        times[key][key_] = f"{np.average(value_[i])} \\pm {np.std(value_[i])}"
+                        times[key][key_][i] = f"{np.average(value_[i])} \\pm {np.std(value_[i])}"
                 else:
                     times[key][key_] = f"{np.average(value_)} \\pm {np.std(value_)}"
     return times
