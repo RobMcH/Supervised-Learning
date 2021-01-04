@@ -222,8 +222,14 @@ if __name__ == '__main__':
     layer_definitions = [[(16 * 16, 10)], [(16 * 16, 192), (192, 10)], [(16 * 16, 192), (192, 128), (128, 10)],
                          [(16 * 16, 192), (192, 128), (128, 96), (96, 10)]]
     num_layers = [len(layer) for layer in layer_definitions]
-    l_vals = [1e-5]
+    l_vals = [0.0, 1e-4, 1e-5]
 
+    # Task 1.1 OvA perceptron and multiclass perceptron.
+    for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
+        print(f"-------- {classifier} -------- {max_iterations} --------")
+        errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier,
+                                        max_iterations=max_iterations), dimensions)
+        errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, max_iterations=max_iterations), cs)
     # MLP.
     for max_iterations, l in product(iterations, l_vals):
         print(f"-------- MLP -------- {max_iterations} -------- {l} --------")
@@ -232,12 +238,6 @@ if __name__ == '__main__':
         if l != 0.0:
             errors_to_latex_table(*task_1_1(polynomial_kernel, layer_definitions, classifier="MLP",
                                             max_iterations=max_iterations, l2=l), num_layers)
-    # Task 1.1 OvA perceptron and multiclass perceptron.
-    for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
-        print(f"-------- {classifier} -------- {max_iterations} --------")
-        errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier,
-                                        max_iterations=max_iterations), dimensions)
-        errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, max_iterations=max_iterations), cs)
     # SVM.
     for max_iterations, C in product(iterations, svm_cs):
         print(f"-------- SVM -------- {max_iterations} -------- {C} --------")

@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from utils import logarithmic, linear, quadratic, cubic, exponential, exponential_2
+from utils import logarithmic, linear, quadratic, cubic
 plt.style.use(['science', 'no-latex'])
 
 
@@ -16,9 +16,9 @@ def plot_sample_complexity(n, m, classifier, log=0, lin=0, quad=0, cube=0, l_pow
     if cube:
         plt.plot(n, cube * cubic(n), label=f"{cube} · n³")
     if l_power:
-        plt.plot(n, np.power(l_power, n), label=f"{l_power}^n")
+        plt.plot(n, np.power(l_power, n, dtype=np.float64), label=f"{l_power}^n")
     if h_power:
-        plt.plot(n, np.power(h_power, n), label=f"{h_power}^n")
+        plt.plot(n, np.power(h_power, n, dtype=np.float64), label=f"{h_power}^n")
     plt.legend()
     plt.title(f"Sample complexity for {classifier}")
     plt.xlabel("Dimensionality (n)")
