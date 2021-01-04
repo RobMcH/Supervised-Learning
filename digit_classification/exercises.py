@@ -248,7 +248,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
 
 
 def measure_time_complexity(iterations, layer_specifications):
-    x_data, y_data = read_data("data/zipcombo.data")
+    x_data, y_data = read_data("data/zipcombo.dat")
     times = {"Gaussian": {"OvA-Perceptron": [], "Perceptron": [], "SVM": [], "Kernel": 0},
              "Polynomial": {"OvA-Perceptron": [], "Perceptron": [], "SVM": [], "Kernel": 0},
              "MLP": {1: [], 2: [], 3: [], 4: []}}
@@ -257,7 +257,7 @@ def measure_time_complexity(iterations, layer_specifications):
         kernel_time = time()
         kernel = kernelise_symmetric(x_data, kernel_func, kernel_param)
         times[kernel_type]["Kernel"] = time() - kernel_time
-        for iteration in iterations:
+        for iteration in tqdm(iterations):
             temp_time = time()
             train_ova_kernel_perceptron(y_data, kernel, iteration)
             times[kernel_type]["OvA-Perceptron"].append(time() - temp_time)
@@ -267,7 +267,7 @@ def measure_time_complexity(iterations, layer_specifications):
             temp_time = time()
             train_ova_svm(kernel, y_data.astype(np.float64), 1.0, iteration)
             times[kernel_type]["SVM"].append(time() - temp_time)
-    for i, layer_specification in enumerate(layer_specifications):
+    for i, layer_specification in enumerate(tqdm(layer_specifications)):
         for iteration in iterations:
             temp_time = time()
             train_mlp(x_data, y_data, iteration, 0.1, layer_specification, momentum=0.95, print_metrics=False,
@@ -285,6 +285,7 @@ if __name__ == '__main__':
     # MLP layer definitions.
     layer_definitions = [[(16 * 16, 10)], [(16 * 16, 192), (192, 10)], [(16 * 16, 192), (192, 128), (128, 10)],
                          [(16 * 16, 192), (192, 128), (128, 96), (96, 10)]]
+    print(measure_time_complexity(iterations, layer_definitions), flush=True)
     num_layers = [len(layer) for layer in layer_definitions]
     l_vals = [0.0, 1e-4, 1e-5]
     iterations = {"OvA-Perceptron": 25, "Perceptron": 250, "SVM": 25, "MLP": 250}
