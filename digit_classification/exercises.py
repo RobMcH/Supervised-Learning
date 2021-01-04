@@ -1,5 +1,6 @@
 import numba
 import numpy as np
+import argparse
 from time import time
 from tqdm import tqdm
 from itertools import product
@@ -171,9 +172,9 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
                     break
         elif classifier == "MLP":
             for i, l in l_vals:
-                kfold_test_errors[index + i * len(kernel_parameters)] =\
+                kfold_test_errors[index + i * len(kernel_parameters)] = \
                     cross_validate_mlp(x_data, y_data, kernel_parameter, max_iterations, kfold_train, kfold_test, l1=l)
-                kfold_test_errors[index + i * len(kernel_parameters) * 2] =\
+                kfold_test_errors[index + i * len(kernel_parameters) * 2] = \
                     cross_validate_mlp(x_data, y_data, kernel_parameter, max_iterations, kfold_train, kfold_test, l2=l)
 
     best_param_indices = np.argmin(kfold_test_errors, axis=0)
@@ -182,7 +183,8 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
         train_indices, test_indices = index_splits[epoch_index]
         if classifier == "SVM" or "Perceptron" in classifier:
             if classifier == "SVM":
-                param_index, C = param_indices[param_index]
+                param_index, C_ind = param_indices[param_index]
+                C = CS[C_ind]
             train_kernel_matrix = matrices[param_index][train_indices][:, train_indices]
             test_kernel_matrix = matrices[param_index][train_indices][:, test_indices]
             if classifier == "SVM":
@@ -248,35 +250,69 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
 
 
 def measure_time_complexity(iterations, layer_specifications):
+    # Measures the time complexity for the implemented classifiers on the whole data set.
     x_data, y_data = read_data("data/zipcombo.dat")
-    times = {"Gaussian": {"OvA-Perceptron": [], "Perceptron": [], "SVM": [], "Kernel": 0},
-             "Polynomial": {"OvA-Perceptron": [], "Perceptron": [], "SVM": [], "Kernel": 0},
-             "MLP": {1: [], 2: [], 3: [], 4: []}}
-    for kernel_params in [("Polynomial", polynomial_kernel, 2), ("Gaussian", gaussian_kernel, 0.01)]:
-        kernel_type, kernel_func, kernel_param = kernel_params
-        kernel_time = time()
-        kernel = kernelise_symmetric(x_data, kernel_func, kernel_param)
-        times[kernel_type]["Kernel"] = time() - kernel_time
-        for iteration in tqdm(iterations):
-            temp_time = time()
-            train_ova_kernel_perceptron(y_data, kernel, iteration)
-            times[kernel_type]["OvA-Perceptron"].append(time() - temp_time)
-            temp_time = time()
-            train_kernel_perceptron(y_data, kernel, iteration)
-            times[kernel_type]["Perceptron"].append(time() - temp_time)
-            temp_time = time()
-            train_ova_svm(kernel, y_data.astype(np.float64), 1.0, iteration)
-            times[kernel_type]["SVM"].append(time() - temp_time)
-    for i, layer_specification in enumerate(tqdm(layer_specifications)):
-        for iteration in iterations:
-            temp_time = time()
-            train_mlp(x_data, y_data, iteration, 0.1, layer_specification, momentum=0.95, print_metrics=False,
-                      return_best_weights=True, batching="Mini", batch_size=64)
-            times["MLP"][i + 1].append(time() - temp_time)
+    times = {"Gaussian": {"OvA-Perceptron": [[] for i in iterations], "Perceptron": [[] for i in iterations],
+                          "SVM": [[] for i in iterations], "Kernel": []},
+             "Polynomial": {"OvA-Perceptron": [[] for i in iterations], "Perceptron": [[] for i in iterations],
+                            "SVM": [[] for i in iterations], "Kernel": []},
+             "MLP": {1: [[] for i in iterations], 2: [[] for i in iterations], 3: [[] for i in iterations],
+                     4: [[] for i in iterations]}}
+    # Warmup - make sure all the functions are compiled.
+    kernel = kernelise_symmetric(x_data, polynomial_kernel, 2)
+    kernelise_symmetric(x_data, gaussian_kernel, 0.01)
+    train_ova_kernel_perceptron(y_data, kernel, 10)
+    train_kernel_perceptron(y_data, kernel, 10)
+    train_ova_svm(kernel, y_data.astype(np.float64), 1.0, 10)
+    train_mlp(x_data, y_data, 10, 0.1, layer_definitions[1], momentum=0.95, print_metrics=False,
+              return_best_weights=True, batching="Mini", batch_size=64)
+    # Benchmark code
+    for _ in tqdm(range(10)):
+        for kernel_params in [("Polynomial", polynomial_kernel, 2), ("Gaussian", gaussian_kernel, 0.01)]:
+            kernel_type, kernel_func, kernel_param = kernel_params
+            # Measure kernel construction time.
+            kernel_time = time()
+            kernel = kernelise_symmetric(x_data, kernel_func, kernel_param)
+            times[kernel_type]["Kernel"].append(time() - kernel_time)
+            for index, iteration in enumerate(iterations):
+                # Measure classifier training time.
+                temp_time = time()
+                train_ova_kernel_perceptron(y_data, kernel, iteration)
+                times[kernel_type]["OvA-Perceptron"][index].append(time() - temp_time)
+                temp_time = time()
+                train_kernel_perceptron(y_data, kernel, iteration)
+                times[kernel_type]["Perceptron"][index].append(time() - temp_time)
+                temp_time = time()
+                train_ova_svm(kernel, y_data.astype(np.float64), 1.0, iteration)
+                times[kernel_type]["SVM"][index].append(time() - temp_time)
+        for i, layer_specification in enumerate(layer_specifications):
+            for iteration in iterations:
+                # Measure MLP training time.
+                temp_time = time()
+                train_mlp(x_data, y_data, iteration, 0.1, layer_specification, momentum=0.95, print_metrics=False,
+                          return_best_weights=True, batching="Mini", batch_size=64)
+                times["MLP"][i + 1][index].append(time() - temp_time)
+    for key, value in times.items():
+        if type(value) == dict:
+            for key_, value_ in value.items():
+                if type(value_) == list and len(value_) > 0 and type(value_[0]) == list:
+                    for i in range(len(value_)):
+                        times[key][key_] = f"{np.average(value_[i])} \\pm {np.std(value_[i])}"
+                else:
+                    times[key][key_] = f"{np.average(value_)} \\pm {np.std(value_)}"
     return times
 
 
+def init_argparser():
+    parser = argparse.ArgumentParser(description="Train classifiers on part of the MNIST data set.")
+    parser.add_argument("-t", "--task", type=int, default=1, help="Task to execute.")
+    parser.add_argument("-b", "--benchmark", type=bool, default=False, help="Benchmark classifiers.")
+    return parser
+
+
 if __name__ == '__main__':
+    argparser = init_argparser()
+    args = argparser.parse_args()
     # Kernel parameters for polynomial and Gaussian kernel.
     dimensions = [i for i in range(1, 8)]
     cs = [0.005, 0.01, 0.1, 1.0, 2.0, 3.0, 5.0]
@@ -285,49 +321,53 @@ if __name__ == '__main__':
     # MLP layer definitions.
     layer_definitions = [[(16 * 16, 10)], [(16 * 16, 192), (192, 10)], [(16 * 16, 192), (192, 128), (128, 10)],
                          [(16 * 16, 192), (192, 128), (128, 96), (96, 10)]]
-    print(measure_time_complexity(iterations, layer_definitions), flush=True)
+    if args.b:
+        print(measure_time_complexity(iterations, layer_definitions), flush=True)
     num_layers = [len(layer) for layer in layer_definitions]
     l_vals = [0.0, 1e-4, 1e-5]
     iterations = {"OvA-Perceptron": 25, "Perceptron": 250, "SVM": 25, "MLP": 250}
-    # SVM.
-    print(f"-------- SVM  -------- {svm_cs} --------")
-    print(*task_1_2(polynomial_kernel, dimensions, classifier="SVM", CS=svm_cs, max_iterations=iterations["SVM"]),
-          flush=True)
-    # Task 1.1 OvA perceptron and multiclass perceptron.
-    for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
-        print(f"-------- {classifier} -------- {max_iterations} --------")
-        errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier,
-                                        max_iterations=max_iterations), dimensions)
-        errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, max_iterations=max_iterations), cs)
-    # MLP.
-    for max_iterations, l in product(iterations, l_vals):
-        print(f"-------- MLP -------- {max_iterations} -------- {l} --------")
-        errors_to_latex_table(*task_1_1(polynomial_kernel, layer_definitions, classifier="MLP",
-                                        max_iterations=max_iterations, l1=l), num_layers)
-        if l != 0.0:
+
+    if args.t == 1:
+        # Task 1.1 OvA perceptron and multiclass perceptron.
+        for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
+            print(f"-------- {classifier} -------- {max_iterations} --------")
+            errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier=classifier,
+                                            max_iterations=max_iterations), dimensions)
+            errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier=classifier, max_iterations=max_iterations),
+                                  cs)
+        # MLP.
+        for max_iterations, l in product(iterations, l_vals):
+            print(f"-------- MLP -------- {max_iterations} -------- {l} --------")
             errors_to_latex_table(*task_1_1(polynomial_kernel, layer_definitions, classifier="MLP",
-                                            max_iterations=max_iterations, l2=l), num_layers)
-    # SVM.
-    for max_iterations, C in product(iterations, svm_cs):
-        print(f"-------- SVM -------- {max_iterations} -------- {C} --------")
-        errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier="SVM", C=C,
-                                        max_iterations=max_iterations), dimensions)
-        errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=C, max_iterations=max_iterations), cs)
+                                            max_iterations=max_iterations, l1=l), num_layers)
+            if l != 0.0:
+                errors_to_latex_table(*task_1_1(polynomial_kernel, layer_definitions, classifier="MLP",
+                                                max_iterations=max_iterations, l2=l), num_layers)
+        # SVM.
+        for max_iterations, C in product(iterations, svm_cs):
+            print(f"-------- SVM -------- {max_iterations} -------- {C} --------")
+            errors_to_latex_table(*task_1_1(polynomial_kernel, dimensions, classifier="SVM", C=C,
+                                            max_iterations=max_iterations), dimensions)
+            errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=C, max_iterations=max_iterations),
+                                  cs)
 
-
-    # Task 1.2 and 1.3. OvA perceptron and multiclass perceptron.
-    for classifier in ["OvA-Perceptron", "Perceptron"]:
-        print(f"-------- {classifier} --------")
-        print(*task_1_2(polynomial_kernel, dimensions, classifier=classifier, max_iterations=iterations[classifier]),
+    if args.t == 2:
+        # Task 1.2 and 1.3. OvA perceptron and multiclass perceptron.
+        for classifier in ["OvA-Perceptron", "Perceptron"]:
+            print(f"-------- {classifier} --------")
+            print(
+                *task_1_2(polynomial_kernel, dimensions, classifier=classifier, max_iterations=iterations[classifier]),
+                flush=True)
+            print(*task_1_2(gaussian_kernel, cs, classifier=classifier, max_iterations=iterations[classifier]),
+                  flush=True)
+        # SVM.
+        print(f"-------- SVM  -------- {svm_cs} --------")
+        print(*task_1_2(polynomial_kernel, dimensions, classifier="SVM", CS=svm_cs, max_iterations=iterations["SVM"]),
               flush=True)
-        print(*task_1_2(gaussian_kernel, cs, classifier=classifier, max_iterations=iterations[classifier]), flush=True)
-    # SVM.
-    print(f"-------- SVM  -------- {svm_cs} --------")
-    print(*task_1_2(polynomial_kernel, dimensions, classifier="SVM", CS=svm_cs, max_iterations=iterations["SVM"]),
-          flush=True)
-    print(*task_1_2(gaussian_kernel, cs, classifier="SVM", C=svm_cs, max_iterations=iterations["SVM"]), flush=True)
-    # MLP.
-    print(f"-------- MLP --------")
-    print(
-        *task_1_2(polynomial_kernel, layer_definitions, classifier="MLP", ls=l_vals, max_iterations=iterations["MLP"]),
-        flush=True)
+        print(*task_1_2(gaussian_kernel, cs, classifier="SVM", C=svm_cs, max_iterations=iterations["SVM"]), flush=True)
+        # MLP.
+        print(f"-------- MLP --------")
+        print(
+            *task_1_2(polynomial_kernel, layer_definitions, classifier="MLP", ls=l_vals,
+                      max_iterations=iterations["MLP"]),
+            flush=True)

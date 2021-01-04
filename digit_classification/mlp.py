@@ -12,6 +12,7 @@ def reset_seed(seed=42):
 
 @numba.njit(parallel=True)
 def cross_entropy_loss(y, y_hat):
+    # Implements the cross-entropy loss.
     loss = -y * np.log(y_hat) - (1 - y) * np.log(1 - y_hat)
     for i in numba.prange(loss.shape[1]):
         loss[np.isnan(loss[:, i]), i] = 0.0
@@ -21,6 +22,7 @@ def cross_entropy_loss(y, y_hat):
 
 @numba.njit()
 def softmax(x_):
+    # Implements a numerically stable softmax function.
     exp = np.exp(x_ - np.max(x_))
     return exp / np.sum(exp)
 
@@ -44,11 +46,13 @@ def sigma_prime(x_):
 
 @numba.njit()
 def relu(x_):
+    # Implements the ReLU activation function. Not used.
     return np.maximum(x_, 0)
 
 
 @numba.njit()
 def relu_prime(x_):
+    #  Implements the ReLU derivative. Not used.
     return np.minimum(np.maximum(x_, 0), 1)
 
 
@@ -61,10 +65,12 @@ def predict(x_, w_, b_):
 
 
 def l1_prime(weight):
+    # Implements L1 regularisation.
     return np.where(weight >= 0, 1.0, -1.0)
 
 
 def l2_prime(weight):
+    # Implements L2 regularisation.
     return weight
 
 
@@ -184,9 +190,13 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
     :param batching: Batch mode. Either 'Full' (default), 'Mini', or SGD.
     :param batch_size: The size of a single batch. Only relevant for batch mode 'Mini'.
     :param momentum: The momentum coefficient. Set to 0 to disable momentum (default).
+    :param l1_reg: L1 regularisation coefficient.
+    :param l2_reg: L2 regularisation coefficient.
     :param return_metrics: Returns a dictionary containing all the training/validation accuracies and losses per epoch.
     :param return_best_weights: Return the best weights (defined by the highest validation accuracy).
     :param print_metrics: Print the metrics during training.
+    :param test_xs: Test data.
+    :param test_ys: Test labels.
     :return: weights [list], (metrics [dict])
     """
     weights = initialise_weights(layers)
