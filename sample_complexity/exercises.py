@@ -51,9 +51,6 @@ def evaluate_1nn():
         # Update global error and change matrices.
         nn_changes += nn_changes_temp
         nn_errors += nn_errors_temp
-        nn_errors_ = np.logical_and(nn_errors / nn_changes <= 10.0, nn_changes)
-        min_samples = np.argmax(nn_errors_, axis=1)
-        print(min_samples)
     # Calculate the lowest values of m that resulted in a test error of <= 10.0 on average.
     x_vals = np.arange(1, 101)
     nn_errors = np.logical_and(nn_errors / nn_changes <= 10.0, nn_changes)
@@ -73,10 +70,10 @@ def evaluate_rest():
     winnow_errors = np.zeros_like(perceptron_errors)
 
     for i in tqdm(range(1, num_runs + 1)):
-        train_x, train_y = generate_data(m_max, n_max)
-        dev_x, dev_y = generate_data(2**16, n_max)
+        train_x, train_y = generate_data(m_max, n_max, np.float64)
+        dev_x, dev_y = generate_data(2**16, n_max, np.float64)
         for n in tqdm(range(1, n_max + 1)):
-            dev_size = np.minimum(2**n, 2**16)
+            dev_size = int(np.minimum(2**n, 2**16))
             current_dev_x, current_dev_y = dev_x[:dev_size, :n], dev_y[:dev_size]
             winnow_dev_x, winnow_dev_y = np.copy(current_dev_x), np.copy(current_dev_y)
             winnow_dev_x[winnow_dev_x == -1] = 0
@@ -84,7 +81,7 @@ def evaluate_rest():
             for m in range(1, m_max + 1):
                 current_x, current_y = train_x[:m, :n], train_y[:m]
                 # Set up data. Set -1s to 0s for winnow_x and winnow_y.
-                winnow_x, winnow_y = np.copy(train_x), np.copy(train_y)
+                winnow_x, winnow_y = np.copy(current_x), np.copy(current_y)
                 winnow_x[winnow_x == -1] = 0
                 winnow_y[winnow_y == -1] = 0
                 # Evaluate perceptron.
