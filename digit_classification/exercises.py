@@ -201,7 +201,8 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
                 predictions = kernel_perceptron_predict(test_kernel_matrix, best_alphas)
                 parameters.append(kernel_parameters[param_index])
         elif classifier == "MLP":
-            param_index, reg_coeff, reg_type = param_indices[param_index]
+            param_index, reg_coeff_ind, reg_type = param_indices[param_index]
+            reg_coeff = ls[reg_coeff_ind]
             layer_definition = kernel_parameters[param_index]
             best_weights = train_mlp(x_data[train_indices], y_data[train_indices], max_iterations, 0.1,
                                      layer_definition, batching="Mini", batch_size=64, momentum=0.95,
@@ -325,7 +326,6 @@ if __name__ == '__main__':
         print(measure_time_complexity(iterations, layer_definitions), flush=True)
     num_layers = [len(layer) for layer in layer_definitions]
     l_vals = [0.0, 1e-4, 1e-5]
-    iterations = {"OvA-Perceptron": 25, "Perceptron": 250, "SVM": 25, "MLP": 250}
 
     if args.t == 1:
         # Task 1.1 OvA perceptron and multiclass perceptron.
@@ -352,6 +352,7 @@ if __name__ == '__main__':
                                   cs)
 
     if args.t == 2:
+        iterations = {"OvA-Perceptron": 25, "Perceptron": 250, "SVM": 25, "MLP": 250}
         # Task 1.2 and 1.3. OvA perceptron and multiclass perceptron.
         for classifier in ["OvA-Perceptron", "Perceptron"]:
             print(f"-------- {classifier} --------")
