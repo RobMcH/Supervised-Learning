@@ -322,12 +322,12 @@ if __name__ == '__main__':
     # MLP layer definitions.
     layer_definitions = [[(16 * 16, 10)], [(16 * 16, 192), (192, 10)], [(16 * 16, 192), (192, 128), (128, 10)],
                          [(16 * 16, 192), (192, 128), (128, 96), (96, 10)]]
-    if args.b:
+    if args.benchmark:
         print(measure_time_complexity(iterations, layer_definitions), flush=True)
     num_layers = [len(layer) for layer in layer_definitions]
     l_vals = [0.0, 1e-4, 1e-5]
 
-    if args.t == 1:
+    if args.task == 1:
         # Task 1.1 OvA perceptron and multiclass perceptron.
         for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
             print(f"-------- {classifier} -------- {max_iterations} --------")
@@ -351,7 +351,7 @@ if __name__ == '__main__':
             errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=C, max_iterations=max_iterations),
                                   cs)
 
-    if args.t == 2:
+    if args.task == 2:
         iterations = {"OvA-Perceptron": 25, "Perceptron": 250, "SVM": 25, "MLP": 250}
         # Task 1.2 and 1.3. OvA perceptron and multiclass perceptron.
         for classifier in ["OvA-Perceptron", "Perceptron"]:
