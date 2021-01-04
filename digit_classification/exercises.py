@@ -1,5 +1,6 @@
 import numba
 import numpy as np
+from time import time
 from tqdm import tqdm
 from itertools import product
 from kernel_perceptron import kernelise_symmetric, train_kernel_perceptron, train_ova_kernel_perceptron, \
@@ -80,7 +81,7 @@ def cross_validate_classifiers(kfold_train_indices, kfold_test_indices, kernel_m
     return kfold_test_errors
 
 
-def cross_validate_mlp(x_data, y_data, layer_definition, epochs, kfold_train_indices, kfold_test_indices, l1, l2):
+def cross_validate_mlp(x_data, y_data, layer_definition, epochs, kfold_train_indices, kfold_test_indices, l1=.0, l2=.0):
     kfold_test_errors = np.zeros(20)
     for i in range(20):
         test_error = 0.0
@@ -129,7 +130,7 @@ def task_1_1(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0,
     return train_errors_mean_std, test_errors_mean_std
 
 
-def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0, max_iterations=100, l1=0.0, l2=0.0):
+def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.0], max_iterations=100, ls=[0.0]):
     x_data, y_data, indices, train_perceptron = setup(classifier)
     num_classes = np.unique(y_data).size
     kernel_str = "polynomial" if kernel_function == polynomial_kernel else "gaussian"
@@ -140,7 +141,14 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0,
     kernel_sums = np.zeros(len(kernel_parameters))
     test_index_counts = np.bincount(np.array([index_splits[i][1] for i in range(20)]).reshape(-1),
                                     minlength=indices.size)
-    kfold_test_errors = np.zeros((len(kernel_parameters), 20), dtype=np.float64)
+    kfold_len = len(kernel_parameters)
+    if classifier == "SVM":
+        kfold_len = len(kernel_parameters) * len(CS)
+        param_indices = [(i, j) for i in range(len(kernel_parameters)) for j in range(len(CS))]
+    elif classifier == "MLP":
+        kfold_len = len(kernel_parameters) * len(ls) * 2
+        param_indices = [(i, j, k) for i in range(len(kernel_parameters)) for j in range(len(ls)) for k in range(2)]
+    kfold_test_errors = np.zeros((kfold_len, 20), dtype=np.float64)
 
     for index, kernel_parameter in enumerate(tqdm(kernel_parameters)):
         kfold_splits = [list(KFold(index_splits[i][0], 5)) for i in range(20)]
@@ -155,18 +163,26 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0,
                 ratio = kernel_sums[index] / kernel_sums[1]
                 kernel_matrix /= ratio
             matrices.append(kernel_matrix)
-            kfold_test_errors[index] = cross_validate_classifiers(kfold_train, kfold_test, kernel_matrix,
-                                                                  train_perceptron, classifier, y_data, C,
-                                                                  max_iterations)
+            for i, C in enumerate(CS):
+                kfold_test_errors[index + i * len(kernel_parameters)] \
+                    = cross_validate_classifiers(kfold_train, kfold_test, kernel_matrix, train_perceptron, classifier,
+                                                 y_data, C, max_iterations)
+                if "Perceptron" in classifier:
+                    break
         elif classifier == "MLP":
-            kfold_test_errors[index] = cross_validate_mlp(x_data, y_data, kernel_parameter, max_iterations, kfold_train,
-                                                          kfold_test, l1, l2)
+            for i, l in l_vals:
+                kfold_test_errors[index + i * len(kernel_parameters)] =\
+                    cross_validate_mlp(x_data, y_data, kernel_parameter, max_iterations, kfold_train, kfold_test, l1=l)
+                kfold_test_errors[index + i * len(kernel_parameters) * 2] =\
+                    cross_validate_mlp(x_data, y_data, kernel_parameter, max_iterations, kfold_train, kfold_test, l2=l)
 
     best_param_indices = np.argmin(kfold_test_errors, axis=0)
     for epoch_index, param_index in enumerate(best_param_indices):
         # Retrain on full training data with the best parameter found during cross-validation.
         train_indices, test_indices = index_splits[epoch_index]
         if classifier == "SVM" or "Perceptron" in classifier:
+            if classifier == "SVM":
+                param_index, C = param_indices[param_index]
             train_kernel_matrix = matrices[param_index][train_indices][:, train_indices]
             test_kernel_matrix = matrices[param_index][train_indices][:, test_indices]
             if classifier == "SVM":
@@ -174,21 +190,25 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0,
                 test_error = evaluate_svm(best_alphas, best_b, y_data[train_indices], y_data[test_indices],
                                           test_kernel_matrix)
                 predictions = ova_predict(best_alphas, best_b, y_data[train_indices], test_kernel_matrix)
+                parameters.append((kernel_parameters[param_index], C))
             elif "Perceptron" in classifier:
                 best_alphas = train_perceptron(y_data[train_indices], train_kernel_matrix, max_iterations)
                 test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, best_alphas)
                 # Find hardest to predict data items for OvA-Perceptron.
                 error_vectors.append(kernel_perceptron_predict(test_kernel_matrix, best_alphas) != y_data[test_indices])
                 predictions = kernel_perceptron_predict(test_kernel_matrix, best_alphas)
+                parameters.append(kernel_parameters[param_index])
         elif classifier == "MLP":
+            param_index, reg_coeff, reg_type = param_indices[param_index]
             layer_definition = kernel_parameters[param_index]
             best_weights = train_mlp(x_data[train_indices], y_data[train_indices], max_iterations, 0.1,
-                                     layer_definition, batching="Mini", batch_size=64, momentum=0.95, l1_reg=l1,
-                                     l2_reg=l2, return_best_weights=True, print_metrics=False)
+                                     layer_definition, batching="Mini", batch_size=64, momentum=0.95,
+                                     l1_reg=reg_coeff if reg_type == 0 else 0.0, return_best_weights=True,
+                                     l2_reg=reg_coeff if reg_type == 1 else 0.0, print_metrics=False)
             test_loss, test_error = calculate_error_loss(x_data[test_indices], best_weights, y_data[test_indices])
             predictions = forward_pass(x_data[test_indices], best_weights, return_prediction=True).argmax(axis=1)
+            parameters.append((param_index + 1, reg_coeff, reg_type))
         # Calculate test error, and save it and the corresponding parameter value.
-        parameters.append(kernel_parameters[param_index])
         test_errors.append(test_error)
         # Calculate confusion matrix on the test data.
         confusion_matrix = generate_absolute_confusion_matrix(predictions, y_data[test_indices], num_classes)
@@ -208,8 +228,52 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", C=1.0,
     plot_confusion_matrix(mean_matrix, std_matrix, num_classes, f"{classifier}_{kernel_str}_{max_iterations}_{C}.pdf")
     # Calculate mean and std of errors and parameters.
     test_errors_mean_std = (np.around(np.average(test_errors), 3), np.around(np.std(test_errors), 3))
-    parameter_mean_std = (np.average(parameters), np.std(parameters))
-    return test_errors_mean_std, parameter_mean_std
+    if "Perceptron" in classifier:
+        parameter_mean_std = (np.average(parameters), np.std(parameters))
+        return test_errors_mean_std, parameter_mean_std
+    elif classifier == "SVM":
+        param_avg, c_avg = [kernel_param for kernel_param, C in parameters], [C for kernel_param, C in parameters]
+        param_std, c_std = np.std(param_avg), np.std(c_avg)
+        param_avg, c_avg = np.average(param_avg), np.average(c_avg)
+        return test_errors_mean_std, (param_avg, param_std, c_avg, c_std)
+    elif classifier == "MLP":
+        layer_avg, reg_avg, reg_t_avg = [], [], []
+        for layer_num, reg_coeff, reg_type in parameters:
+            layer_avg.append(layer_num)
+            reg_avg.append(reg_coeff)
+            reg_t_avg.append(reg_type)
+        layer_std, reg_std, reg_t_std = np.std(layer_avg), np.std(reg_avg), np.std(reg_t_avg)
+        layer_avg, reg_avg, reg_t_avg = np.average(layer_avg), np.average(reg_avg), np.average(reg_t_std)
+        return test_errors_mean_std, (layer_avg, layer_std, reg_avg, reg_std, reg_t_avg, reg_t_std)
+
+
+def measure_time_complexity(iterations, layer_specifications):
+    x_data, y_data = read_data("data/zipcombo.data")
+    times = {"Gaussian": {"OvA-Perceptron": [], "Perceptron": [], "SVM": [], "Kernel": 0},
+             "Polynomial": {"OvA-Perceptron": [], "Perceptron": [], "SVM": [], "Kernel": 0},
+             "MLP": {1: [], 2: [], 3: [], 4: []}}
+    for kernel_params in [("Polynomial", polynomial_kernel, 2), ("Gaussian", gaussian_kernel, 0.01)]:
+        kernel_type, kernel_func, kernel_param = kernel_params
+        kernel_time = time()
+        kernel = kernelise_symmetric(x_data, kernel_func, kernel_param)
+        times[kernel_type]["Kernel"] = time() - kernel_time
+        for iteration in iterations:
+            temp_time = time()
+            train_ova_kernel_perceptron(y_data, kernel, iteration)
+            times[kernel_type]["OvA-Perceptron"].append(time() - temp_time)
+            temp_time = time()
+            train_kernel_perceptron(y_data, kernel, iteration)
+            times[kernel_type]["Perceptron"].append(time() - temp_time)
+            temp_time = time()
+            train_ova_svm(kernel, y_data.astype(np.float64), 1.0, iteration)
+            times[kernel_type]["SVM"].append(time() - temp_time)
+    for i, layer_specification in enumerate(layer_specifications):
+        for iteration in iterations:
+            temp_time = time()
+            train_mlp(x_data, y_data, iteration, 0.1, layer_specification, momentum=0.95, print_metrics=False,
+                      return_best_weights=True, batching="Mini", batch_size=64)
+            times["MLP"][i + 1].append(time() - temp_time)
+    return times
 
 
 if __name__ == '__main__':
@@ -223,7 +287,11 @@ if __name__ == '__main__':
                          [(16 * 16, 192), (192, 128), (128, 96), (96, 10)]]
     num_layers = [len(layer) for layer in layer_definitions]
     l_vals = [0.0, 1e-4, 1e-5]
-
+    iterations = {"OvA-Perceptron": 25, "Perceptron": 250, "SVM": 25, "MLP": 250}
+    # SVM.
+    print(f"-------- SVM  -------- {svm_cs} --------")
+    print(*task_1_2(polynomial_kernel, dimensions, classifier="SVM", CS=svm_cs, max_iterations=iterations["SVM"]),
+          flush=True)
     # Task 1.1 OvA perceptron and multiclass perceptron.
     for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
         print(f"-------- {classifier} -------- {max_iterations} --------")
@@ -245,15 +313,20 @@ if __name__ == '__main__':
                                         max_iterations=max_iterations), dimensions)
         errors_to_latex_table(*task_1_1(gaussian_kernel, cs, classifier="SVM", C=C, max_iterations=max_iterations), cs)
 
+
     # Task 1.2 and 1.3. OvA perceptron and multiclass perceptron.
-    for classifier, max_iterations in product(["OvA-Perceptron", "Perceptron"], iterations):
-        print(f"-------- {classifier} -------- {max_iterations} --------")
-        print(*task_1_2(polynomial_kernel, dimensions, classifier=classifier, max_iterations=max_iterations),
+    for classifier in ["OvA-Perceptron", "Perceptron"]:
+        print(f"-------- {classifier} --------")
+        print(*task_1_2(polynomial_kernel, dimensions, classifier=classifier, max_iterations=iterations[classifier]),
               flush=True)
-        print(*task_1_2(gaussian_kernel, cs, classifier=classifier, max_iterations=max_iterations), flush=True)
+        print(*task_1_2(gaussian_kernel, cs, classifier=classifier, max_iterations=iterations[classifier]), flush=True)
     # SVM.
-    for max_iterations, C in product(iterations, svm_cs):
-        print(f"-------- SVM -------- {max_iterations} -------- {C} --------")
-        print(*task_1_2(polynomial_kernel, dimensions, classifier="SVM", C=C, max_iterations=max_iterations),
-              flush=True)
-        print(*task_1_2(gaussian_kernel, cs, classifier="SVM", C=C, max_iterations=max_iterations), flush=True)
+    print(f"-------- SVM  -------- {svm_cs} --------")
+    print(*task_1_2(polynomial_kernel, dimensions, classifier="SVM", CS=svm_cs, max_iterations=iterations["SVM"]),
+          flush=True)
+    print(*task_1_2(gaussian_kernel, cs, classifier="SVM", C=svm_cs, max_iterations=iterations["SVM"]), flush=True)
+    # MLP.
+    print(f"-------- MLP --------")
+    print(
+        *task_1_2(polynomial_kernel, layer_definitions, classifier="MLP", ls=l_vals, max_iterations=iterations["MLP"]),
+        flush=True)
