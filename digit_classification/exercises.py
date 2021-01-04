@@ -92,7 +92,7 @@ def cross_validate_mlp(x_data, y_data, layer_definition, epochs, kfold_train_ind
             test_x, test_y = x_data[kfold_test], y_data[kfold_test]
             weights = train_mlp(train_x, train_y, epochs, 0.1, layer_definition, batching="Mini", batch_size=64,
                                 momentum=0.95, l1_reg=l1, l2_reg=l2, return_best_weights=True, print_metrics=False)
-            test_error += calculate_error_loss(test_x, weights, test_y)
+            test_error += calculate_error_loss(test_x, weights, test_y)[1]
         kfold_test_errors[i] = test_error / 5.0
     return kfold_test_errors
 
@@ -171,7 +171,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
                 if "Perceptron" in classifier:
                     break
         elif classifier == "MLP":
-            for i, l in l_vals:
+            for i, l in enumerate(ls):
                 kfold_test_errors[index + i * len(kernel_parameters)] = \
                     cross_validate_mlp(x_data, y_data, kernel_parameter, max_iterations, kfold_train, kfold_test, l1=l)
                 kfold_test_errors[index + i * len(kernel_parameters) * 2] = \
@@ -356,9 +356,8 @@ if __name__ == '__main__':
         # Task 1.2 and 1.3. OvA perceptron and multiclass perceptron.
         for classifier in ["OvA-Perceptron", "Perceptron"]:
             print(f"-------- {classifier} --------")
-            print(
-                *task_1_2(polynomial_kernel, dimensions, classifier=classifier, max_iterations=iterations[classifier]),
-                flush=True)
+            print(*task_1_2(polynomial_kernel, dimensions, classifier=classifier,
+                            max_iterations=iterations[classifier]), flush=True)
             print(*task_1_2(gaussian_kernel, cs, classifier=classifier, max_iterations=iterations[classifier]),
                   flush=True)
         # SVM.
@@ -368,7 +367,5 @@ if __name__ == '__main__':
         print(*task_1_2(gaussian_kernel, cs, classifier="SVM", C=svm_cs, max_iterations=iterations["SVM"]), flush=True)
         # MLP.
         print(f"-------- MLP --------")
-        print(
-            *task_1_2(polynomial_kernel, layer_definitions, classifier="MLP", ls=l_vals,
-                      max_iterations=iterations["MLP"]),
-            flush=True)
+        print(*task_1_2(polynomial_kernel, layer_definitions, classifier="MLP", ls=l_vals,
+                        max_iterations=iterations["MLP"]), flush=True)
