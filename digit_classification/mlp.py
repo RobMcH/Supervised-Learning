@@ -13,11 +13,11 @@ def reset_seed(seed=42):
 @numba.njit(parallel=True)
 def cross_entropy_loss(y, y_hat):
     # Implements the cross-entropy loss.
-    loss = -y * np.log(y_hat) - (1 - y) * np.log(1 - y_hat)
+    loss = -y * np.log(y_hat + 1e-8)
     for i in numba.prange(loss.shape[1]):
         loss[np.isnan(loss[:, i]), i] = 0.0
         loss[np.isinf(loss[:, i]), i] = np.finfo(loss.dtype).max
-    return np.sum(loss)
+    return np.sum(loss) / y.shape[0]
 
 
 @numba.njit()

@@ -265,7 +265,7 @@ def measure_time_complexity(iterations, layer_specifications):
     train_ova_kernel_perceptron(y_data, kernel, 10)
     train_kernel_perceptron(y_data, kernel, 10)
     train_ova_svm(kernel, y_data.astype(np.float64), 1.0, 10)
-    train_mlp(x_data, y_data, 10, 0.1, layer_definitions[1], momentum=0.95, print_metrics=False,
+    train_mlp(x_data, y_data, 10, 0.1, layer_definitions[0], momentum=0.95, print_metrics=False,
               return_best_weights=True, batching="Mini", batch_size=64)
     # Benchmark code
     for _ in tqdm(range(10)):
@@ -287,12 +287,13 @@ def measure_time_complexity(iterations, layer_specifications):
                 train_ova_svm(kernel, y_data.astype(np.float64), 1.0, iteration)
                 times[kernel_type]["SVM"][index].append(time() - temp_time)
         for i, layer_specification in enumerate(layer_specifications):
-            for iteration in iterations:
+            for index, iteration in enumerate(iterations):
                 # Measure MLP training time.
                 temp_time = time()
                 train_mlp(x_data, y_data, iteration, 0.1, layer_specification, momentum=0.95, print_metrics=False,
                           return_best_weights=True, batching="Mini", batch_size=64)
                 times["MLP"][i + 1][index].append(time() - temp_time)
+    # Calculate averages and standard deviations.
     for key, value in times.items():
         if type(value) == dict:
             for key_, value_ in value.items():
@@ -364,7 +365,7 @@ if __name__ == '__main__':
         print(f"-------- SVM  -------- {svm_cs} --------")
         print(*task_1_2(polynomial_kernel, dimensions, classifier="SVM", CS=svm_cs, max_iterations=iterations["SVM"]),
               flush=True)
-        print(*task_1_2(gaussian_kernel, cs, classifier="SVM", C=svm_cs, max_iterations=iterations["SVM"]), flush=True)
+        print(*task_1_2(gaussian_kernel, cs, classifier="SVM", CS=svm_cs, max_iterations=iterations["SVM"]), flush=True)
         # MLP.
         print(f"-------- MLP --------")
         print(*task_1_2(polynomial_kernel, layer_definitions, classifier="MLP", ls=l_vals,
