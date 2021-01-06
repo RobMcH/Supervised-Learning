@@ -38,7 +38,7 @@ def predict(alphas, train_y, kernel_matrix, b):
 
 
 @numba.njit()
-def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
+def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b, epsilon=1e-3):
     if i_1 == i_2:
         return 0, b
     alpha_1, y_1, error_1 = alphas[i_1], train_y[i_1], errors[i_1]
@@ -64,11 +64,11 @@ def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
         Hobj = objective(temp_alphas, kernel_matrix, train_y)
         # Clip alpha_2_new to constrain it.
         alpha_2_new = alpha_2
-        if Lobj > Hobj + 1e-3:
+        if Lobj > Hobj + epsilon:
             alpha_2_new = L
-        elif Lobj < Hobj - 1e-3:
+        elif Lobj < Hobj - epsilon:
             alpha_2_new = H
-    if np.abs(alpha_2_new - alpha_2) < 1e-3 * (alpha_2_new + alpha_2 + 1e-3):
+    if np.abs(alpha_2_new - alpha_2) < epsilon * (alpha_2_new + alpha_2 + epsilon):
         return 0, b
     # Compute value of alpha_1_new from alpha_2_new.
     alpha_1_new = alpha_1 + s * (alpha_2 - alpha_2_new)
@@ -100,11 +100,11 @@ def take_step(i_1, i_2, alphas, train_y, errors, C, kernel_matrix, b):
 
 
 @numba.njit()
-def examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b):
+def examine_example(i_2, train_y, alphas, errors, C, kernel_matrix, b, epsilon=1e-3):
     alpha_2, y_2, error_2 = alphas[i_2], train_y[i_2], errors[i_2]
     r2 = error_2 * y_2
     # Check if the given example violates the KKT conditions.
-    if (r2 < -1e-3 and alpha_2 < C) or (r2 > 1e-3 and alpha_2 > 0):
+    if (r2 < -epsilon and alpha_2 < C) or (r2 > epsilon and alpha_2 > 0):
         non_c_0_alpha = np.where((alphas != 0) & (alphas != C), True, False)
         alpha_indices = np.arange(0, len(non_c_0_alpha))
         # Second choice heuristics for finding the second example that results in the biggest step size.
@@ -175,6 +175,7 @@ def train_svm(kernel_matrix, train_y, C, max_iterations=100):
 
 @numba.njit(parallel=True)
 def setup_ys(train_y, num_classes):
+    # Create matrix of modified ys for OvA training.
     ys = np.zeros((num_classes, train_y.size))
     for i in numba.prange(num_classes):
         ys[i] = np.where(train_y == i, 1, -1)

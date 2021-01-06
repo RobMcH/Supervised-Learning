@@ -83,6 +83,7 @@ def forward_pass(xs, weights, return_prediction=False, activation=sigma):
     # function.
     forward_dicts = [{}, {}]
     prev_output = xs
+    # Loop through layers, calculate outputs and feed them through activation functions.
     for i in range(len(weights)):
         weight, bias = weights[i]
         forward_dicts[0][i + 1] = predict(prev_output, weight, bias)
@@ -179,7 +180,8 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
     Trains a multi-layer perceptron. The training is performed by gradient descent and backpropagation. The training
     supports different batch modes ('Full', 'Mini', and 'SGD'). The parameter batch_size specifies the size of a single
     batch for the batch mode 'Mini' (otherwise the parameter is ignored). The momentum parameter specifies the momentum
-    coefficient. To disable momentum the parameter can be set to 0.0 (default).
+    coefficient. To disable momentum the parameter can be set to 0.0 (default). The parameters l1_reg and l2_reg control
+    the regularisation coefficients. To disable regularisation set the parameters to 0.0 (default).
     :param xs: Training data.
     :param ys: Training targets.
     :param epochs: The number of epochs the training should be run for.
@@ -207,8 +209,6 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
     prev_gradients = [(np.zeros_like(weight[0]), np.zeros_like(weight[1])) for weight in weights]
     # Reverse order of initial prev_gradients (based on weight shapes) as the gradients start from the last layer.
     prev_gradients.reverse()
-    # RNG.
-    rng = np.random.default_rng(42)
     # Split the training data into full/mini/SGD batches.
     if batching != "Full":
         if batching == "Mini" and batch_size > 0:
@@ -224,12 +224,6 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
     # Training
     for epoch in range(epochs):
         if batching != "Full":
-            if batching == "SGD":
-                # Shuffle data for SGD. xs and ys are shuffled in the exact same way.
-                rng_state = rng.__getstate__()
-                rng.shuffle(x_batches)
-                rng.__setstate__(rng_state)
-                rng.shuffle(y_batches)
             for i in range(len(x_batches)):
                 # Train on mini-batches. prev_gradients is only used if momentum > 0.0.
                 gradients, forward_dict = analytical_gradients(x_batches[i], y_batches[i], weights, l1_reg=l1_reg,
@@ -241,7 +235,7 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
             gradients, forward_dict = analytical_gradients(xs, ys, weights)
             weights = optimizer(weights, gradients, learning_rate, layer_count, momentum, prev_gradients)
             prev_gradients = gradients
-        # Calculate accuracy and loss on the training and validation sets.
+        # Calculate error and loss on the training and test (if present) sets.
         train_loss, train_error = calculate_error_loss(xs, weights, ys)
         metrics["train_err"][epoch] = train_error
         metrics["train_loss"][epoch] = train_loss

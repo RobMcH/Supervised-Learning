@@ -11,8 +11,10 @@ def fit_linear_regression(x, y):
 
 @numba.njit()
 def fit_linear_regression_underdetermined(x, y):
+    # Solve least squares in the underdetermined case. Gives equal solution to normal least squares in other cases.
     return np.linalg.pinv(x) @ y
 
 
 def evaluate_linear_regression(parameters, x, y):
+    # Calculate the error.
     return (np.around(x @ parameters) != y).sum() / y.size * 100.0

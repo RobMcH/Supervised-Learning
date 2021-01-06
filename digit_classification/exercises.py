@@ -30,6 +30,7 @@ def setup(classifier):
 
 @numba.njit(parallel=True, nogil=True)
 def evaluate_classifiers(index_splits, kernel_matrix, train_perceptron, classifier, y_data, C, max_iterations):
+    # Evaluates the perceptron/SVM with given parameters over random data splits given by index_splits.
     train_errors, test_errors = np.zeros(len(index_splits)), np.zeros(len(index_splits))
     for i in numba.prange(len(index_splits)):
         train_indices, test_indices = index_splits[i]
@@ -47,6 +48,7 @@ def evaluate_classifiers(index_splits, kernel_matrix, train_perceptron, classifi
 
 
 def evaluate_mlp(x_data, y_data, layer_definition, index_splits, epochs, l1, l2):
+    # Evaluates the MLP with given parameters over random data splits given by index_splits.
     train_errors, test_errors = np.zeros(len(index_splits)), np.zeros(len(index_splits))
     for i in range(len(index_splits)):
         train_indices, test_indices = index_splits[i]
@@ -64,6 +66,7 @@ def evaluate_mlp(x_data, y_data, layer_definition, index_splits, epochs, l1, l2)
 @numba.njit(parallel=True, nogil=True)
 def cross_validate_classifiers(kfold_train_indices, kfold_test_indices, kernel_matrix, train_perceptron, classifier,
                                y_data, C, max_iterations):
+    # Cross validate the perceptron/SVM. Returns an array of 20 cross validation errors.
     kfold_test_errors = np.zeros(20)
     for i in numba.prange(20):
         test_error = 0.0
@@ -83,6 +86,7 @@ def cross_validate_classifiers(kfold_train_indices, kfold_test_indices, kernel_m
 
 
 def cross_validate_mlp(x_data, y_data, layer_definition, epochs, kfold_train_indices, kfold_test_indices, l1=.0, l2=.0):
+    # Cross validate the MLP. Returns an array of 20 cross validation errors.
     kfold_test_errors = np.zeros(20)
     for i in range(20):
         test_error = 0.0
@@ -142,6 +146,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
     kernel_sums = np.zeros(len(kernel_parameters))
     test_index_counts = np.bincount(np.array([index_splits[i][1] for i in range(20)]).reshape(-1),
                                     minlength=indices.size)
+    # Set up mapping between parameters and indices in the given lists.
     kfold_len = len(kernel_parameters)
     if classifier == "SVM":
         kfold_len = len(kernel_parameters) * len(CS)
@@ -172,6 +177,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
                     break
         elif classifier == "MLP":
             for i, l in enumerate(ls):
+                # Evaluate MLP with L1 and subsequently with L2 regularisation.
                 kfold_test_errors[index + i * len(kernel_parameters)] = \
                     cross_validate_mlp(x_data, y_data, kernel_parameter, max_iterations, kfold_train, kfold_test, l1=l)
                 kfold_test_errors[index + i * len(kernel_parameters) * 2] = \
@@ -188,12 +194,14 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
             train_kernel_matrix = matrices[param_index][train_indices][:, train_indices]
             test_kernel_matrix = matrices[param_index][train_indices][:, test_indices]
             if classifier == "SVM":
+                # Retrain SVM with best parameters.
                 best_alphas, best_b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C, max_iterations)
                 test_error = evaluate_svm(best_alphas, best_b, y_data[train_indices], y_data[test_indices],
                                           test_kernel_matrix)
                 predictions = ova_predict(best_alphas, best_b, y_data[train_indices], test_kernel_matrix)
                 parameters.append((kernel_parameters[param_index], C))
             elif "Perceptron" in classifier:
+                # Retrain perceptron with best parameters.
                 best_alphas = train_perceptron(y_data[train_indices], train_kernel_matrix, max_iterations)
                 test_error = kernel_perceptron_evaluate(y_data[test_indices], test_kernel_matrix, best_alphas)
                 # Find hardest to predict data items for OvA-Perceptron.
@@ -201,6 +209,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
                 predictions = kernel_perceptron_predict(test_kernel_matrix, best_alphas)
                 parameters.append(kernel_parameters[param_index])
         elif classifier == "MLP":
+            # Retrain MLP with best parameters.
             param_index, reg_coeff_ind, reg_type = param_indices[param_index]
             reg_coeff = ls[reg_coeff_ind]
             layer_definition = kernel_parameters[param_index]
@@ -232,14 +241,17 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
     # Calculate mean and std of errors and parameters.
     test_errors_mean_std = (np.around(np.average(test_errors), 3), np.around(np.std(test_errors), 3))
     if "Perceptron" in classifier:
+        # Calculate average and standard deviation of perceptron parameters.
         parameter_mean_std = (np.average(parameters), np.std(parameters))
         return test_errors_mean_std, parameter_mean_std
     elif classifier == "SVM":
+        # Calculate average and standard deviation of SVM parameters.
         param_avg, c_avg = [kernel_param for kernel_param, C in parameters], [C for kernel_param, C in parameters]
         param_std, c_std = np.std(param_avg), np.std(c_avg)
         param_avg, c_avg = np.average(param_avg), np.average(c_avg)
         return test_errors_mean_std, (param_avg, param_std, c_avg, c_std)
     elif classifier == "MLP":
+        # Calculate average and standard deviation of MLP parameters.
         layer_avg, reg_avg, reg_t_avg = [], [], []
         for layer_num, reg_coeff, reg_type in parameters:
             layer_avg.append(layer_num)
@@ -353,7 +365,7 @@ if __name__ == '__main__':
                                   cs)
 
     if args.task == 2:
-        iterations = {"OvA-Perceptron": 25, "Perceptron": 250, "SVM": 25, "MLP": 250}
+        iterations = {"OvA-Perceptron": 10, "Perceptron": 10, "SVM": 10, "MLP": 10}
         # Task 1.2 and 1.3. OvA perceptron and multiclass perceptron.
         for classifier in ["OvA-Perceptron", "Perceptron"]:
             print(f"-------- {classifier} --------")

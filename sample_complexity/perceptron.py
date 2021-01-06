@@ -13,7 +13,7 @@ def perceptron_fit(xs, ys):
         y_hat = -1 if x @ w < 0 else 1
         # If the prediction is wrong update the weights by +/- x.
         if y_hat != y:
-            w += -y_hat * x
+            w += y * x
     return w
 
 

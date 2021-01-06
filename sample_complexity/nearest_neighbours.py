@@ -6,7 +6,7 @@ warnings.filterwarnings("ignore", category=numba.NumbaPerformanceWarning)
 
 @numba.njit(parallel=True)
 def calculate_initial_distances(test_x, train_x):
-    # Calculates the L1 distance between every training and test point w.r.t. their first feature.
+    # Calculates the L1 distance between every training and test point w.r.t. their first features.
     distances = np.zeros((train_x.shape[0], test_x.shape[0]), dtype=np.int32)
     for i in numba.prange(train_x.shape[0]):
         point = train_x[i][0]
@@ -44,4 +44,5 @@ def find_nearest_neighbour(distances, m, test_size, min, argmin):
 
 @numba.njit()
 def nearest_neighbours_evaluate(argmin, train_y, dev_y):
+    # Calculates the error.
     return (train_y[argmin] != dev_y).sum() / dev_y.size * 100.0
