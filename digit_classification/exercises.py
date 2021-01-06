@@ -237,7 +237,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
         plot_images(x_data[hardest_samples], y_data[hardest_samples], kernel_str, max_iterations)
     # Merge and plot confusion matrix.
     mean_matrix, std_matrix = merge_confusion_matrices(confusion_matrices)
-    plot_confusion_matrix(mean_matrix, std_matrix, num_classes, f"{classifier}_{kernel_str}_{max_iterations}_{C}.pdf")
+    plot_confusion_matrix(mean_matrix, std_matrix, num_classes, f"{classifier}_{kernel_str}_{max_iterations}.pdf")
     # Calculate mean and std of errors and parameters.
     test_errors_mean_std = (np.around(np.average(test_errors), 3), np.around(np.std(test_errors), 3))
     if "Perceptron" in classifier:
