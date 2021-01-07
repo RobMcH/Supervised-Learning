@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 from perceptron import perceptron_fit, perceptron_evaluate
-from least_squares import evaluate_linear_regression, fit_linear_regression_underdetermined
+from least_squares import evaluate_linear_regression, fit_linear_regression
 from winnow import winnow_fit, winnow_evaluate
 from nearest_neighbours import nearest_neighbours_evaluate, calculate_initial_distances, update_distances,\
     find_initial_nearest_neighbour, find_nearest_neighbour
@@ -88,7 +88,7 @@ def evaluate_rest():
                 w = perceptron_fit(current_x, current_y)
                 perceptron_errors[n - 1, m - 1] += perceptron_evaluate(w, current_dev_x, current_dev_y)
                 # Evaluate least squares.
-                parameters = fit_linear_regression_underdetermined(current_x, current_y)
+                parameters = fit_linear_regression(current_x, current_y)
                 lr_errors[n - 1, m - 1] += evaluate_linear_regression(parameters, current_dev_x, current_dev_y)
                 # Evaluate winnow.
                 w = winnow_fit(winnow_x, winnow_y)

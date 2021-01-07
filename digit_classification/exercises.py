@@ -156,10 +156,10 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
         param_indices = [(i, j, k) for i in range(len(kernel_parameters)) for j in range(len(ls)) for k in range(2)]
     kfold_test_errors = np.zeros((kfold_len, 20), dtype=np.float64)
 
+    kfold_splits = [list(KFold(index_splits[i][0], 5)) for i in range(20)]
+    kfold_train = [kfold_splits[i][j][0] for i in range(20) for j in range(5)]
+    kfold_test = [kfold_splits[i][j][1] for i in range(20) for j in range(5)]
     for index, kernel_parameter in enumerate(tqdm(kernel_parameters)):
-        kfold_splits = [list(KFold(index_splits[i][0], 5)) for i in range(20)]
-        kfold_train = [kfold_splits[i][j][0] for i in range(20) for j in range(5)]
-        kfold_test = [kfold_splits[i][j][1] for i in range(20) for j in range(5)]
         if classifier == "SVM" or "Perceptron" in classifier:
             # Create kernel matrix on full data set and save it for later.
             kernel_matrix = kernelise_symmetric(x_data, kernel_function, kernel_parameter)
@@ -170,7 +170,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
                 kernel_matrix /= ratio
             matrices.append(kernel_matrix)
             for i, C in enumerate(CS):
-                kfold_test_errors[index + i * len(kernel_parameters)] \
+                kfold_test_errors[index * len(CS) + i] \
                     = cross_validate_classifiers(kfold_train, kfold_test, kernel_matrix, train_perceptron, classifier,
                                                  y_data, C, max_iterations)
                 if "Perceptron" in classifier:
@@ -178,9 +178,9 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
         elif classifier == "MLP":
             for i, l in enumerate(ls):
                 # Evaluate MLP with L1 and subsequently with L2 regularisation.
-                kfold_test_errors[index + i * len(kernel_parameters)] = \
+                kfold_test_errors[index * len(ls) * 2 + i * 2] = \
                     cross_validate_mlp(x_data, y_data, kernel_parameter, max_iterations, kfold_train, kfold_test, l1=l)
-                kfold_test_errors[index + i * len(kernel_parameters) * 2] = \
+                kfold_test_errors[index * len(ls) * 2 + i * 2 + 1] = \
                     cross_validate_mlp(x_data, y_data, kernel_parameter, max_iterations, kfold_train, kfold_test, l2=l)
 
     best_param_indices = np.argmin(kfold_test_errors, axis=0)
@@ -212,6 +212,7 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
             # Retrain MLP with best parameters.
             param_index, reg_coeff_ind, reg_type = param_indices[param_index]
             reg_coeff = ls[reg_coeff_ind]
+            reg_type = reg_type + 1 if reg_coeff != 0.0 else 0.0
             layer_definition = kernel_parameters[param_index]
             best_weights = train_mlp(x_data[train_indices], y_data[train_indices], max_iterations, 0.1,
                                      layer_definition, batching="Mini", batch_size=64, momentum=0.95,

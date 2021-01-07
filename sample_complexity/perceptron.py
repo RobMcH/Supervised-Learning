@@ -19,7 +19,4 @@ def perceptron_fit(xs, ys):
 
 @numba.njit()
 def perceptron_evaluate(w, xs, ys):
-    predictions = xs @ w
-    predictions[predictions < 0] = -1
-    predictions[predictions >= 0] = 1
-    return (predictions != ys).sum() / ys.size * 100.0
+    return (np.where(xs @ w >= 0.0, 1.0, -1.0) != ys).mean() * 100.0
