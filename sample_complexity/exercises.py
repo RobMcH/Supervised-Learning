@@ -97,11 +97,11 @@ def evaluate_rest():
     # Plot perceptron sample complexity.
     perceptron_errors = perceptron_errors / num_runs <= 10.0
     min_samples = np.argmax(perceptron_errors, axis=1) + 1
-    plot_sample_complexity(x_vals, min_samples, "perceptron", lin=1.8)
+    plot_sample_complexity(x_vals, min_samples, "perceptron", lin=1.81)
     # Plot least squares sample complexity.
     lr_errors = lr_errors / num_runs <= 10.0
     min_samples = np.argmax(lr_errors, axis=1) + 1
-    plot_sample_complexity(x_vals, min_samples, "least squares", lin=0.91)
+    plot_sample_complexity(x_vals, min_samples, "least squares", lin=0.63)
     # Plot winnow sample complexity.
     winnow_errors = winnow_errors / num_runs <= 10.0
     min_samples = np.argmax(winnow_errors, axis=1) + 1
