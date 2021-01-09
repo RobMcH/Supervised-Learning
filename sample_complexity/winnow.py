@@ -17,7 +17,5 @@ def winnow_fit(xs, ys):
 
 def winnow_evaluate(w, xs, ys):
     n = xs.shape[1]
-    predictions = xs @ w
-    predictions[predictions < n] = 0
-    predictions[predictions >= n] = 1
+    predictions = np.where(xs @ w >= n, 1.0, 0.0)
     return (predictions != ys).sum() / ys.size * 100.0

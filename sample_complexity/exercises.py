@@ -69,12 +69,14 @@ def evaluate_rest():
     lr_errors = np.zeros_like(perceptron_errors)
     winnow_errors = np.zeros_like(perceptron_errors)
 
+    # Average over num_runs runs.
     for i in tqdm(range(1, num_runs + 1)):
         train_x, train_y = generate_data(m_max, n_max, np.float64)
         dev_x, dev_y = generate_data(2**16, n_max, np.float64)
         for n in tqdm(range(1, n_max + 1)):
             dev_size = int(np.minimum(2**n, 2**16))
             current_dev_x, current_dev_y = dev_x[:dev_size, :n], dev_y[:dev_size]
+            # Get modified data for winnow.
             winnow_dev_x, winnow_dev_y = np.copy(current_dev_x), np.copy(current_dev_y)
             winnow_dev_x[winnow_dev_x == -1] = 0
             winnow_dev_y[winnow_dev_y == -1] = 0
