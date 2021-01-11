@@ -12,7 +12,7 @@ def reset_seed(seed=42):
 
 @numba.njit(parallel=True)
 def cross_entropy_loss(y, y_hat):
-    # Implements the cross-entropy loss.
+    """Implements the cross-entropy loss."""
     loss = -y * np.log(y_hat + 1e-8)
     for i in numba.prange(loss.shape[1]):
         loss[np.isnan(loss[:, i]), i] = 0.0
@@ -22,7 +22,7 @@ def cross_entropy_loss(y, y_hat):
 
 @numba.njit()
 def softmax(x_):
-    # Implements a numerically stable softmax function.
+    """Implements a numerically stable softmax function."""
     exp = np.exp(x_ - np.max(x_))
     return exp / np.sum(exp)
 
@@ -46,13 +46,13 @@ def sigma_prime(x_):
 
 @numba.njit()
 def relu(x_):
-    # Implements the ReLU activation function. Not used.
+    """Implements the ReLU activation function. Not used."""
     return np.maximum(x_, 0)
 
 
 @numba.njit()
 def relu_prime(x_):
-    #  Implements the ReLU derivative. Not used.
+    """Implements the ReLU derivative. Not used."""
     return np.minimum(np.maximum(x_, 0), 1)
 
 
@@ -65,12 +65,12 @@ def predict(x_, w_, b_):
 
 
 def l1_prime(weight):
-    # Implements L1 regularisation.
+    """Implements L1 regularisation."""
     return np.where(weight >= 0, 1.0, -1.0)
 
 
 def l2_prime(weight):
-    # Implements L2 regularisation.
+    """Implements L2 regularisation."""
     return weight
 
 
@@ -186,7 +186,7 @@ def train_mlp(xs, ys, epochs, learning_rate, layers, optimizer=update_weights, b
     :param ys: Training targets.
     :param epochs: The number of epochs the training should be run for.
     :param learning_rate: The learning rate for the weight updates.
-    :param layers: The specification of the layers. An iterable containing tuples of (output_dimension, input_dimension)
+    :param layers: The specification of the layers. An iterable containing tuples of (input_dimension, output_dimension)
     are expected. Each tuple specifies a single layer in the network.
     :param optimizer: Function to perform the weight update.
     :param batching: Batch mode. Either 'Full' (default), 'Mini', or SGD.
