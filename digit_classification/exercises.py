@@ -34,8 +34,8 @@ def evaluate_classifiers(index_splits, kernel_matrix, train_perceptron, classifi
     train_errors, test_errors = np.zeros(len(index_splits)), np.zeros(len(index_splits))
     for i in numba.prange(len(index_splits)):
         train_indices, test_indices = index_splits[i]
-        train_kernel_matrix = kernel_matrix[train_indices][:, train_indices]
-        test_kernel_matrix = kernel_matrix[train_indices][:, test_indices]
+        train_kernel_matrix = kernel_matrix[np.ix_(train_indices, train_indices)]
+        test_kernel_matrix = kernel_matrix[np.ix_(train_indices, test_indices)]
         if classifier == "SVM":
             alphas, b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C, max_iterations)
             train_errors[i] = evaluate_svm(alphas, b, y_data[train_indices], y_data[train_indices], train_kernel_matrix)
@@ -73,8 +73,8 @@ def cross_validate_classifiers(kfold_train_indices, kfold_test_indices, kernel_m
         for j in range(5):
             kfold_train, kfold_test = kfold_train_indices[i * 5 + j], kfold_test_indices[i * 5 + j]
             # Get kernel matrices corresponding to the current kfold train/test split.
-            train_kernel_matrix = kernel_matrix[kfold_train][:, kfold_train]
-            test_kernel_matrix = kernel_matrix[kfold_train][:, kfold_test]
+            train_kernel_matrix = kernel_matrix[np.ix_(kfold_train, kfold_train)]
+            test_kernel_matrix = kernel_matrix[np.ix_(kfold_train, kfold_test)]
             if classifier == "SVM":
                 alphas, b = train_ova_svm(train_kernel_matrix, y_data[kfold_train], C, max_iterations)
                 test_error += evaluate_svm(alphas, b, y_data[kfold_train], y_data[kfold_test], test_kernel_matrix)
@@ -191,8 +191,8 @@ def task_1_2(kernel_function, kernel_parameters, classifier="Perceptron", CS=[1.
             if classifier == "SVM":
                 param_index, C_ind = param_indices[param_index]
                 C = CS[C_ind]
-            train_kernel_matrix = matrices[param_index][train_indices][:, train_indices]
-            test_kernel_matrix = matrices[param_index][train_indices][:, test_indices]
+            train_kernel_matrix = matrices[param_index][np.ix_(train_indices, train_indices)]
+            test_kernel_matrix = matrices[param_index][np.ix_(train_indices, test_indices)]
             if classifier == "SVM":
                 # Retrain SVM with best parameters.
                 best_alphas, best_b = train_ova_svm(train_kernel_matrix, y_data[train_indices], C, max_iterations)
